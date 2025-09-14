@@ -212,7 +212,7 @@ impl Sorter for HeapSort {
                         if progress.is_finite() { progress } else { 0.0 }
                     }
                     HeapSortState::ExtractMax => {
-                        if self.data.len() == 0 {
+                        if self.data.is_empty() {
                             1.0
                         } else {
                             let extraction_progress = (self.data.len() - self.heap_size) as f32 / self.data.len() as f32;

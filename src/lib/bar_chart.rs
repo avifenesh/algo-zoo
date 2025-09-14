@@ -108,8 +108,7 @@ impl BarChart {
     pub fn from_array_with_colors(array: &[i32], highlights: &[usize]) -> Self {
         let data: Vec<(String, u64)> = array
             .iter()
-            .enumerate()
-            .map(|(_i, &value)| (value.to_string(), value.max(0) as u64))
+            .map(|&value| (value.to_string(), value.max(0) as u64))
             .collect();
 
         let mut chart = Self::new(data);
@@ -138,7 +137,7 @@ impl BarChart {
             (array.to_vec(), 1)
         } else {
             // Need to sample
-            let sample_rate = (array_len + available_width - 1) / available_width;
+            let sample_rate = array_len.div_ceil(available_width);
             let sampled: Vec<i32> = (0..available_width)
                 .map(|i| {
                     let idx = (i * sample_rate).min(array_len - 1);

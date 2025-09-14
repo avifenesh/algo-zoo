@@ -4,7 +4,7 @@
 //! partition state between steps. Tests are designed to fail initially since the
 //! incremental partitioning feature is not yet implemented.
 
-use sorting_race::models::traits::{Sorter, StepResult};
+use sorting_race::models::traits::Sorter;
 use sorting_race::services::sorters::quick::QuickSort;
 
 /// Test that Quick Sort can work with limited budget (k=16)
@@ -19,12 +19,12 @@ fn test_quicksort_with_limited_budget() {
 
     let budget = 16;
     let mut total_steps = 0;
-    let mut total_comparisons = 0;
+    let mut _total_comparisons = 0;
 
     // The algorithm should work with limited budget
     while !quicksort.is_complete() && total_steps < 100 {
         let result = quicksort.step(budget);
-        total_comparisons += result.comparisons_used;
+        _total_comparisons += result.comparisons_used;
         total_steps += 1;
 
         // Each step should use at most the budget
@@ -187,7 +187,7 @@ fn test_incremental_partitioning_pivot_strategies() {
 
     // Should have multiple different pivots during execution
     let unique_pivots: std::collections::HashSet<_> =
-        pivot_changes.into_iter().filter_map(|p| p).collect();
+        pivot_changes.into_iter().flatten().collect();
 
     assert!(
         unique_pivots.len() > 1,

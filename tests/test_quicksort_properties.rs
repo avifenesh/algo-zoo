@@ -5,7 +5,7 @@
 //! designed to fail initially since incremental partitioning is not implemented.
 
 use proptest::prelude::*;
-use sorting_race::models::traits::{Sorter, Telemetry};
+use sorting_race::models::traits::Sorter;
 use sorting_race::services::sorters::quick::QuickSort;
 use std::collections::HashSet;
 
@@ -80,7 +80,7 @@ fn property_comparison_complexity_reasonable() {
             // Allow generous bounds since Quick Sort can degrade to O(n²) in worst case
             let n_log_n = if n > 1 { n * (n as f32).log2().ceil() as usize } else { 1 };
             let reasonable_upper_bound = n * n; // O(n²) worst case
-            let reasonable_lower_bound = if n > 1 { n - 1 } else { 0 }; // At least n-1 for any comparison sort
+            let reasonable_lower_bound = n.saturating_sub(1); // At least n-1 for any comparison sort
 
             prop_assert!(total_comparisons >= reasonable_lower_bound,
                 "Too few comparisons: {} < {} for array size {}",
@@ -261,7 +261,7 @@ fn property_state_consistency_small_budgets() {
             let array_before = quicksort.get_array().to_vec();
             let telemetry_before = quicksort.get_telemetry();
 
-            let result = quicksort.step(small_budget);
+            let _result = quicksort.step(small_budget);
             steps += 1;
 
             let array_after = quicksort.get_array().to_vec();

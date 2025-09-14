@@ -143,7 +143,7 @@ impl PerformanceWeightedFairness {
     pub fn record_efficiency(&mut self, algorithm_name: &str, efficiency: f32) {
         let history = self.efficiency_history
             .entry(algorithm_name.to_string())
-            .or_insert_with(Vec::new);
+            .or_default();
         
         history.push(efficiency.max(0.0));
         

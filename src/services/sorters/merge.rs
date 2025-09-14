@@ -182,8 +182,8 @@ impl Sorter for MergeSort {
     fn get_telemetry(&self) -> Telemetry {
         let mut markers = Markers::default();
         
-        if let Some(frame) = self.stack.last() {
-            if frame.state == MergeState::Merge {
+        if let Some(frame) = self.stack.last()
+            && frame.state == MergeState::Merge {
                 markers.merge_runs.push((frame.left, frame.right));
                 
                 // Show current merge positions
@@ -197,7 +197,6 @@ impl Sorter for MergeSort {
                     markers.cursors.push(frame.output_idx);
                 }
             }
-        }
 
         Telemetry {
             total_comparisons: self.comparisons,

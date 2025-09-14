@@ -1,9 +1,10 @@
 //! Configuration types for sorting race simulation
 
 /// Data distribution patterns for generated arrays
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum Distribution {
     /// Random shuffled array
+    #[default]
     Shuffled,
     /// Nearly sorted array with few out-of-place elements
     NearlySorted,
@@ -15,12 +16,6 @@ pub enum Distribution {
     Sorted,
     /// Array with duplicates
     WithDuplicates,
-}
-
-impl Default for Distribution {
-    fn default() -> Self {
-        Distribution::Shuffled
-    }
 }
 
 /// Fairness model configuration

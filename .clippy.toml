@@ -1,6 +1,5 @@
 # Clippy linting configuration
 msrv = "1.90.0"
-warn-by-default = true
 
 # Allows
 allow-expect-in-tests = true

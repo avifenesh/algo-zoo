@@ -161,7 +161,7 @@ impl FairnessModel for AdaptiveWallTimeFairness {
 mod tests {
     use super::*;
     use crate::services::sorters::bubble::BubbleSort;
-    use std::thread;
+    
     use std::time::Duration;
 
     #[test]

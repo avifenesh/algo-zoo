@@ -13,7 +13,7 @@ pub struct MetricsSparkline {
     data: VecDeque<f64>,
     capacity: usize,
     width: usize,
-    height: usize,
+    _height: usize,
     title: String,
     unit: String,
 }
@@ -25,7 +25,7 @@ impl MetricsSparkline {
             data: VecDeque::with_capacity(capacity),
             capacity,
             width: capacity.min(100), // Default visual width
-            height: 1,
+            _height: 1,
             title: String::new(),
             unit: String::new(),
         }
@@ -60,7 +60,7 @@ impl MetricsSparkline {
         let levels = chars.len() as f64;
 
         let mut result = String::new();
-        let points_to_show = self.data.len().min(self.width);
+        let _points_to_show = self.data.len().min(self.width);
 
         // Take the most recent data points that fit in the width
         let start_index = if self.data.len() > self.width {

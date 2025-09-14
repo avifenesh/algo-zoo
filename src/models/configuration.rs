@@ -153,7 +153,7 @@ impl ConfigurationState {
 
     /// Set array size with validation
     pub fn set_array_size(&mut self, size: u32) -> Result<()> {
-        if size < 10 || size > 1000 {
+        if !(10..=1000).contains(&size) {
             return Err(anyhow!("Array size must be between 10 and 1000, got {}", size));
         }
         self.array_size = size;

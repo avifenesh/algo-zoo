@@ -5,7 +5,7 @@
 //! bounds. Tests are designed to fail initially since incremental partitioning
 //! is not implemented.
 
-use sorting_race::models::traits::{Sorter, StepResult, Telemetry};
+use sorting_race::models::traits::Sorter;
 use sorting_race::services::sorters::quick::QuickSort;
 
 const BUDGET_K: usize = 16;
@@ -367,6 +367,6 @@ fn calculate_max_expected_steps(n: usize, budget: usize) -> usize {
         1
     };
 
-    let expected_steps = (n_log_n + budget - 1) / budget; // Ceiling division
+    let expected_steps = n_log_n.div_ceil(budget); // Ceiling division
     expected_steps * 5 // 5x safety margin for worst case
 }

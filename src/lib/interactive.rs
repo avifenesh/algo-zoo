@@ -15,6 +15,13 @@ use ratatui::{
     widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Widget},
 };
 
+// Constants for configuration limits
+const TOTAL_ALGORITHMS: usize = 7;
+const MAX_ARRAY_SIZE: u32 = 10000;
+const MAX_BUDGET: u32 = 1000000;
+const MAX_FLOAT_PARAM: f32 = 100.0;
+const MAX_INPUT_LENGTH: usize = 10;
+
 /// Interactive configuration menu system
 #[derive(Debug, Clone)]
 pub struct InteractiveConfigMenu {
@@ -141,7 +148,7 @@ impl InteractiveConfigMenu {
                 modifiers: KeyModifiers::NONE,
                 ..
             } => {
-                self.interactive_mode.cycle_array_view_algorithm(7); // 7 algorithms total
+                self.interactive_mode.cycle_array_view_algorithm(TOTAL_ALGORITHMS);
                 Ok(true)
             }
             // Race control (Space key)
@@ -345,47 +352,40 @@ impl InteractiveConfigMenu {
                     }
                 }
                 ConfigurationField::BudgetParam => {
-                    if let Some(ref value_str) = self.current_parameter_value {
-                        if let Ok(budget) = value_str.parse::<u32>() {
+                    if let Some(ref value_str) = self.current_parameter_value
+                        && let Ok(budget) = value_str.parse::<u32>() {
                             self.interactive_mode.set_budget_parameter(budget)?;
                             self.config_state.budget = Some(budget);
                             self.current_parameter_value = None;
                             self.interactive_mode.clear_config_focus();
                         }
-                    }
                 }
                 ConfigurationField::AlphaParam => {
-                    if let Some(ref value_str) = self.current_parameter_value {
-                        if let Ok(alpha) = value_str.parse::<f32>() {
-                            if alpha > 0.0 {
+                    if let Some(ref value_str) = self.current_parameter_value
+                        && let Ok(alpha) = value_str.parse::<f32>()
+                            && alpha > 0.0 {
                                 self.config_state.alpha = Some(alpha);
                                 self.current_parameter_value = None;
                                 self.interactive_mode.clear_config_focus();
                             }
-                        }
-                    }
                 }
                 ConfigurationField::BetaParam => {
-                    if let Some(ref value_str) = self.current_parameter_value {
-                        if let Ok(beta) = value_str.parse::<f32>() {
-                            if beta > 0.0 {
+                    if let Some(ref value_str) = self.current_parameter_value
+                        && let Ok(beta) = value_str.parse::<f32>()
+                            && beta > 0.0 {
                                 self.config_state.beta = Some(beta);
                                 self.current_parameter_value = None;
                                 self.interactive_mode.clear_config_focus();
                             }
-                        }
-                    }
                 }
                 ConfigurationField::LearningRateParam => {
-                    if let Some(ref value_str) = self.current_parameter_value {
-                        if let Ok(learning_rate) = value_str.parse::<f32>() {
-                            if learning_rate > 0.0 && learning_rate <= 1.0 {
+                    if let Some(ref value_str) = self.current_parameter_value
+                        && let Ok(learning_rate) = value_str.parse::<f32>()
+                            && learning_rate > 0.0 && learning_rate <= 1.0 {
                                 self.config_state.learning_rate = Some(learning_rate);
                                 self.current_parameter_value = None;
                                 self.interactive_mode.clear_config_focus();
                             }
-                        }
-                    }
                 }
             }
         }
@@ -794,12 +794,35 @@ impl InteractiveConfigMenu {
         }
         let current_value = self.current_parameter_value.as_mut().unwrap();
 
-        // Limit input length to prevent overflow and validate input
-        if current_value.len() < 10 {
-            // Only allow one decimal point
-            if digit == '.' && current_value.contains('.') {
-                return Ok(());
+        // Only allow one decimal point
+        if digit == '.' && current_value.contains('.') {
+            return Ok(());
+        }
+
+        // Create test value to validate before adding
+        let test_value = format!("{}{}", current_value, digit);
+
+        // Validate based on the field type with proper bounds
+        let is_valid = match self.interactive_mode.config_focus {
+            Some(ConfigurationField::ArraySize) => {
+                test_value.parse::<u32>()
+                    .map(|v| v <= MAX_ARRAY_SIZE)
+                    .unwrap_or(true)  // Allow incomplete numbers
             }
+            Some(ConfigurationField::BudgetParam) => {
+                test_value.parse::<u32>()
+                    .map(|v| v <= MAX_BUDGET)
+                    .unwrap_or(true)
+            }
+            Some(ConfigurationField::AlphaParam | ConfigurationField::BetaParam | ConfigurationField::LearningRateParam) => {
+                test_value.parse::<f32>()
+                    .map(|v| v <= MAX_FLOAT_PARAM)
+                    .unwrap_or(true)
+            }
+            _ => true,
+        };
+
+        if is_valid && current_value.len() < MAX_INPUT_LENGTH {
             current_value.push(digit);
         }
         Ok(())

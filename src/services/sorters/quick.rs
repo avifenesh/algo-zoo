@@ -163,8 +163,8 @@ impl Sorter for QuickSort {
         let mut remaining_budget = budget;
 
         // Handle ongoing partition if in progress
-        if matches!(self.partition_state, PartitionState::InProgress { .. }) {
-            if let Some(pivot_pos) = self.continue_partition(&mut remaining_budget) {
+        if matches!(self.partition_state, PartitionState::InProgress { .. })
+            && let Some(pivot_pos) = self.continue_partition(&mut remaining_budget) {
                 // Partition completed - add sub-problems to stack
                 if let Some(frame) = self.stack.last() {
                     let current_frame = frame.clone();
@@ -189,7 +189,6 @@ impl Sorter for QuickSort {
                 self.partition_state = PartitionState::NotStarted;
             }
             // If partition didn't complete, we'll continue it in the next step
-        }
 
         // Start new partitions if budget allows and no partition is in progress
         while remaining_budget > 0 && !self.stack.is_empty() && 

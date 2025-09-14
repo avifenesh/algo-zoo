@@ -109,8 +109,8 @@ impl ProgressBar {
         let mut info_area = None;
 
         // Reserve space for label and percentage if needed
-        if (self.show_label && !self.label.is_empty()) || self.show_percentage {
-            if inner_area.height >= 2 {
+        if ((self.show_label && !self.label.is_empty()) || self.show_percentage)
+            && inner_area.height >= 2 {
                 bar_area.height = inner_area.height - 1;
                 info_area = Some(Rect {
                     x: inner_area.x,
@@ -119,7 +119,6 @@ impl ProgressBar {
                     height: 1,
                 });
             }
-        }
 
         // Render the progress bar
         let filled_width = (self.progress * bar_area.width as f32) as u16;
@@ -153,7 +152,7 @@ impl ProgressBar {
             
             if self.show_percentage {
                 if !info_text.is_empty() {
-                    info_text.push_str(" ");
+                    info_text.push(' ');
                 }
                 info_text.push_str(&format!("{:.1}%", self.progress * 100.0));
             }

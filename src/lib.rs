@@ -1,6 +1,10 @@
 //! Sorting Race Visualization Library
-//! 
+//!
 //! A terminal-based sorting algorithm race visualization tool
+
+// Allow some clippy style lints that are too pedantic
+#![allow(clippy::manual_clamp)]
+#![allow(clippy::if_same_then_else)]
 
 pub mod models {
     pub mod traits;

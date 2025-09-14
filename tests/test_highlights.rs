@@ -100,7 +100,7 @@ impl HighlightSystem {
                 Highlight::new(HighlightColor::Blue, HighlightPriority::Medium, "compare");
             self.highlights
                 .entry(index)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(highlight);
         }
     }
@@ -111,7 +111,7 @@ impl HighlightSystem {
             let highlight = Highlight::new(HighlightColor::Red, HighlightPriority::High, "swap");
             self.highlights
                 .entry(index)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(highlight);
         }
     }
@@ -128,7 +128,7 @@ impl HighlightSystem {
             let highlight = Highlight::new(color, priority, operation_type);
             self.highlights
                 .entry(index)
-                .or_insert_with(Vec::new)
+                .or_default()
                 .push(highlight);
         }
     }
@@ -231,6 +231,12 @@ impl Default for HighlightSystem {
 /// Integration with Telemetry markers for operation highlighting
 pub struct TelemetryHighlightIntegration {
     highlight_system: HighlightSystem,
+}
+
+impl Default for TelemetryHighlightIntegration {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TelemetryHighlightIntegration {
@@ -523,7 +529,7 @@ mod tests {
 
     #[test]
     fn test_no_highlights_scenario() {
-        let mut system = HighlightSystem::new();
+        let system = HighlightSystem::new();
 
         assert_eq!(system.highlight_count(), 0);
         assert!(system.get_highlighted_indices().is_empty());

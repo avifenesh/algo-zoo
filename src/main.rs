@@ -239,9 +239,9 @@ fn run_app<B: ratatui::backend::Backend>(
             if !interactive_menu.is_racing() {
                 // Render the actual interactive menu
                 let area = f.area();
-                interactive_menu.render(area, &mut f.buffer_mut());
+                interactive_menu.render(area, f.buffer_mut());
             } else {
-                ui::<B>(
+                ui(
                     f,
                     &algorithms,
                     &current_config,
@@ -258,14 +258,14 @@ fn run_app<B: ratatui::backend::Backend>(
             .checked_sub(last_tick.elapsed())
             .unwrap_or_else(|| Duration::from_secs(0));
 
-        if crossterm::event::poll(timeout)? {
-            if let Event::Key(key) = event::read()? {
+        if crossterm::event::poll(timeout)?
+            && let Event::Key(key) = event::read()? {
                 // Always handle interactive menu events
                 let menu_handled = interactive_menu.handle_key_event(key)?;
 
                 // Check if we just transitioned to racing mode
-                if interactive_menu.should_start_new_race() {
-                    if let Some(new_run_config) = interactive_menu.get_run_config() {
+                if interactive_menu.should_start_new_race()
+                    && let Some(new_run_config) = interactive_menu.get_run_config() {
                             current_config = new_run_config;
 
                             // Regenerate array with new configuration
@@ -290,9 +290,7 @@ fn run_app<B: ratatui::backend::Backend>(
 
                             // Unpause to start the race
                             paused = false;
-                        }
                     }
-
 
                     // Handle additional key events not handled by menu
                     if !menu_handled {
@@ -329,7 +327,6 @@ fn run_app<B: ratatui::backend::Backend>(
                         _ => {},
                     }
                 }
-            }
         }
 
         if last_tick.elapsed() >= tick_rate {
@@ -347,7 +344,8 @@ fn run_app<B: ratatui::backend::Backend>(
     }
 }
 
-fn ui<B: ratatui::backend::Backend>(
+#[allow(clippy::too_many_arguments)]
+fn ui(
     f: &mut Frame,
     algorithms: &[Box<dyn Sorter>],
     config: &RunConfiguration,
@@ -505,7 +503,7 @@ fn ui<B: ratatui::backend::Backend>(
     f.render_widget(algorithms_list, bottom_chunks[0]);
 
     // Sparklines area (simplified text display)
-    let sparkline_text = if sparklines.len() > 0 {
+    let sparkline_text = if !sparklines.is_empty() {
         let mut text_lines = Vec::new();
         let algorithm_names: Vec<String> =
             algorithms.iter().map(|a| a.name().to_string()).collect();

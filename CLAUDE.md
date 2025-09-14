@@ -14,13 +14,17 @@ This file provides context for Claude AI or other AI assistants working on the S
 - Memory usage tracking
 - Interactive controls (pause/resume/reset)
 
-## Current Status
+## Current Status (v0.2.0)
 
 ### ✅ Completed
 - All core algorithms implemented and tested
 - Quick Sort incremental partitioning (k=16 budget)
 - Fairness models working correctly
 - Memory reporting fixed and displaying correctly
+- **NEW: Interactive terminal UI with real-time configuration**
+- **NEW: Dynamic memory tracking visualization**
+- **NEW: Large array handling (viewport & compact modes)**
+- **NEW: Improved UI layout with full-width array view**
 - 0 compilation warnings
 - 114 tests passing
 - CI/CD pipelines configured
@@ -28,11 +32,12 @@ This file provides context for Claude AI or other AI assistants working on the S
 - Benchmark suite created
 
 ### 📊 Quality Metrics
-- **Binary Size**: 2.0MB
+- **Binary Size**: ~2.5MB
 - **Memory Usage**: ~3.5MB for n=1000
 - **Frame Rate**: 30-36 FPS
-- **Test Coverage**: High (114 tests)
+- **Test Coverage**: High (114+ tests)
 - **Platforms**: Linux, macOS, Windows
+- **Max Array Size**: Handles 10,000+ elements with compact visualization
 
 ## Key Technical Details
 

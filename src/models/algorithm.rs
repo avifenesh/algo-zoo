@@ -1,9 +1,10 @@
 //! Algorithm state management
 
 /// Algorithm execution state
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub enum AlgorithmState {
     /// Algorithm is ready to start
+    #[default]
     Ready,
     /// Algorithm is actively executing
     Running,
@@ -11,12 +12,6 @@ pub enum AlgorithmState {
     Complete,
     /// Algorithm encountered an error
     Error(String),
-}
-
-impl Default for AlgorithmState {
-    fn default() -> Self {
-        AlgorithmState::Ready
-    }
 }
 
 /// Algorithm configuration and state tracking

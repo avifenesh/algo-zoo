@@ -98,11 +98,10 @@ impl DisplayMode {
     pub fn get_current_array_data<'a>(&self, algorithms: &'a [Box<dyn Sorter>]) -> Option<&'a [i32]> {
         // Find the algorithm that matches our viewed algorithm
         for (i, algorithm) in algorithms.iter().enumerate() {
-            if let Some(expected_type) = AlgorithmType::from_index(i) {
-                if expected_type == self.viewed_algorithm {
+            if let Some(expected_type) = AlgorithmType::from_index(i)
+                && expected_type == self.viewed_algorithm {
                     return Some(algorithm.get_array());
                 }
-            }
         }
         None
     }
@@ -241,7 +240,7 @@ pub enum MemoryDisplayValue {
 
 impl MemoryDisplayValue {
     /// Format as human-readable string
-    pub fn to_string(&self) -> String {
+    pub fn as_string(&self) -> String {
         match self {
             MemoryDisplayValue::Bytes(bytes) => {
                 Self::format_bytes(*bytes)
@@ -271,7 +270,7 @@ impl MemoryDisplayValue {
 
 impl std::fmt::Display for MemoryDisplayValue {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self.as_string())
     }
 }
 

@@ -1,6 +1,6 @@
 //! Tests for Quick Sort behavior without accessing private implementation details
 
-use sorting_race::models::traits::{Sorter, StepResult};
+use sorting_race::models::traits::Sorter;
 use sorting_race::services::sorters::quick::QuickSort;
 
 /// Test that Quick Sort can handle small budgets and resume correctly

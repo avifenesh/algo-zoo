@@ -4,10 +4,9 @@
 //! The tests are designed to fail initially since the BarChart component is stubbed.
 
 use ratatui::{
-    Terminal,
     backend::TestBackend,
     buffer::Buffer,
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::Rect,
     style::{Color, Style},
 };
 
@@ -75,7 +74,7 @@ impl BarChart {
     }
 
     /// Render the bar chart to a ratatui buffer
-    pub fn render(&self, area: Rect, buf: &mut Buffer) {
+    pub fn render(&self, _area: Rect, _buf: &mut Buffer) {
         // This is a stub implementation that will fail tests
         // The actual implementation should render bars based on the data
         unimplemented!("BarChart::render() is not yet implemented")
@@ -215,7 +214,7 @@ mod tests {
 
         terminal
             .draw(|f| {
-                let area = f.size();
+                let area = f.area();
                 let mut buffer = Buffer::empty(area);
 
                 // This should panic because render is not implemented
