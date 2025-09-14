@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: [stable, beta]
+        exclude:
+          # Reduce matrix for faster CI
+          - os: windows-latest
+            rust: beta
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+        components: rustfmt, clippy
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache target directory
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Check formatting
+      run: cargo fmt -- --check
+      if: matrix.rust == 'stable'
+    
+    - name: Run clippy
+      run: cargo clippy -- -D warnings
+      if: matrix.rust == 'stable'
+    
+    - name: Build
+      run: cargo build --verbose
+    
+    - name: Run tests
+      run: cargo test --verbose
+    
+    - name: Build release
+      run: cargo build --release --verbose
+      if: matrix.rust == 'stable'
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Install tarpaulin
+      run: cargo install cargo-tarpaulin
+    
+    - name: Generate coverage
+      run: cargo tarpaulin --out xml
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./cobertura.xml
+        fail_ci_if_error: false
+
+  benchmark:
+    name: Performance Benchmark
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust stable
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-bench-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run benchmarks
+      run: |
+        cargo build --release
+        # Run quick benchmarks
+        cargo run --release -- --size 100 --seed 42 &
+        PID=$!
+        sleep 5
+        kill $PID || true
+        
+        cargo run --release -- --size 500 --seed 42 &
+        PID=$!
+        sleep 5
+        kill $PID || true
+    
+    - name: Check binary size
+      run: |
+        ls -lh target/release/sorting-race
+        SIZE=$(stat -c%s target/release/sorting-race)
+        if [ $SIZE -gt 5242880 ]; then
+          echo "Binary size exceeded 5MB limit: $SIZE bytes"
+          exit 1
+        fi
+
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: rustsec/audit-check@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,141 @@
+# CLI Interface Contract for Sorting Race
+
+openapi: 3.0.0
+info:
+  title: Sorting Race CLI
+  version: 0.2.0
+  description: Command-line interface for sorting algorithm visualization
+
+paths:
+  /run:
+    summary: Execute sorting race
+    parameters:
+      - name: size
+        in: query
+        description: Array size for sorting
+        schema:
+          type: integer
+          minimum: 2
+          maximum: 1000
+          default: 50
+      
+      - name: seed
+        in: query
+        description: Random seed for deterministic execution
+        schema:
+          type: integer
+          format: int64
+          default: 12345
+      
+      - name: distribution
+        in: query
+        description: Initial array distribution
+        schema:
+          type: string
+          enum: [shuffled, nearly-sorted, reversed, few-unique, sorted, with-duplicates]
+          default: shuffled
+      
+      - name: fair
+        in: query
+        description: Fairness model to use
+        schema:
+          type: string
+          enum: [comp, weighted, walltime, adaptive]
+          default: comp
+      
+      - name: budget
+        in: query
+        description: Comparison budget for comp fairness
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          default: 16
+      
+      - name: alpha
+        in: query
+        description: Comparison weight for weighted fairness
+        schema:
+          type: number
+          format: float
+          default: 1.0
+      
+      - name: beta
+        in: query
+        description: Move weight for weighted fairness
+        schema:
+          type: number
+          format: float
+          default: 1.0
+      
+      - name: fps
+        in: query
+        description: Target frames per second
+        schema:
+          type: integer
+          minimum: 10
+          maximum: 60
+          default: 30
+
+components:
+  schemas:
+    AlgorithmState:
+      type: object
+      properties:
+        name:
+          type: string
+          enum: [Bubble Sort, Insertion Sort, Selection Sort, Quick Sort, Heap Sort, Merge Sort, Shell Sort]
+        comparisons:
+          type: integer
+          format: int64
+        moves:
+          type: integer
+          format: int64
+        progress:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+        complete:
+          type: boolean
+        array:
+          type: array
+          items:
+            type: integer
+    
+    FairnessAllocation:
+      type: object
+      properties:
+        algorithm:
+          type: string
+        budget:
+          type: integer
+        rationale:
+          type: string
+    
+    VisualizationFrame:
+      type: object
+      properties:
+        timestamp:
+          type: integer
+          format: int64
+        algorithms:
+          type: array
+          items:
+            $ref: '#/components/schemas/AlgorithmState'
+        allocations:
+          type: array
+          items:
+            $ref: '#/components/schemas/FairnessAllocation'
+        paused:
+          type: boolean
+
+    KeyboardEvent:
+      type: object
+      properties:
+        key:
+          type: string
+          enum: [space, q, r, up, down, left, right]
+        action:
+          type: string
+          enum: [pause, quit, reset, navigate]
