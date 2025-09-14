@@ -3,17 +3,17 @@
 //! These tests verify the complete visualization pipeline from algorithms to terminal,
 //! testing frame rate limiting, memory usage, and responsiveness to terminal resize.
 
-use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
-use std::thread;
 use ratatui::{
-    backend::TestBackend,
     Terminal,
+    backend::TestBackend,
     layout::{Constraint, Direction, Layout, Rect},
 };
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::{Duration, Instant};
 
 // Import existing types (these would be actual imports in real code)
-use sorting_race::models::traits::{Sorter, Telemetry, Markers};
+use sorting_race::models::traits::{Markers, Sorter, Telemetry};
 
 /// Mock sorter for testing the visualization pipeline
 #[derive(Debug)]
@@ -44,12 +44,12 @@ impl Sorter for MockSorter {
         self.step_count += 1;
         self.comparisons += budget as u64;
         self.moves += (budget / 2) as u64;
-        
+
         // Simulate some work and mark complete after a few steps
         if self.step_count > 5 {
             self.is_complete = true;
         }
-        
+
         sorting_race::models::traits::StepResult {
             comparisons_used: budget,
             moves_made: budget / 2,
@@ -67,7 +67,11 @@ impl Sorter for MockSorter {
             total_moves: self.moves,
             memory_current: 1024,
             memory_peak: 2048,
-            highlights: if self.step_count % 2 == 0 { vec![0, 1] } else { vec![2, 3] },
+            highlights: if self.step_count % 2 == 0 {
+                vec![0, 1]
+            } else {
+                vec![2, 3]
+            },
             markers: Markers {
                 pivot: Some(self.array.len() / 2),
                 cursors: vec![self.step_count % self.array.len()],
@@ -127,7 +131,7 @@ impl FrameRateLimiter {
 
     pub fn limit_frame_rate(&mut self) {
         let now = Instant::now();
-        
+
         if let Some(last_time) = self.last_frame_time {
             let elapsed = now.duration_since(last_time);
             if elapsed < self.frame_duration {
@@ -135,7 +139,7 @@ impl FrameRateLimiter {
                 thread::sleep(sleep_duration);
             }
         }
-        
+
         self.last_frame_time = Some(Instant::now());
     }
 
@@ -229,16 +233,21 @@ impl VisualizationPipeline {
 
     pub fn render_frame(&mut self) -> Result<String, String> {
         // Simulate memory usage calculation
-        let total_memory: usize = self.algorithms.iter()
+        let total_memory: usize = self
+            .algorithms
+            .iter()
             .map(|alg| alg.get_memory_usage())
-            .sum::<usize>() + 
-            (self.terminal_size.0 as usize * self.terminal_size.1 as usize * 4); // Terminal buffer
-        
+            .sum::<usize>()
+            + (self.terminal_size.0 as usize * self.terminal_size.1 as usize * 4); // Terminal buffer
+
         self.memory_monitor.record_usage(total_memory);
-        
+
         if !self.memory_monitor.is_under_limit() {
-            return Err(format!("Memory usage exceeded limit: {} bytes > {} bytes", 
-                             total_memory, self.memory_monitor.limit()));
+            return Err(format!(
+                "Memory usage exceeded limit: {} bytes > {} bytes",
+                total_memory,
+                self.memory_monitor.limit()
+            ));
         }
 
         // Apply frame rate limiting
@@ -246,23 +255,27 @@ impl VisualizationPipeline {
 
         // Generate rendered frame
         let mut frame = String::new();
-        frame.push_str(&format!("Frame {}: {}x{}\n", 
-                               self.frame_count, 
-                               self.terminal_size.0, 
-                               self.terminal_size.1));
-        
+        frame.push_str(&format!(
+            "Frame {}: {}x{}\n",
+            self.frame_count, self.terminal_size.0, self.terminal_size.1
+        ));
+
         for algorithm in &self.algorithms {
             let telemetry = algorithm.get_telemetry();
-            frame.push_str(&format!("{}: {} comparisons, {} moves, {:.1}% complete\n",
-                                   algorithm.name(),
-                                   telemetry.total_comparisons,
-                                   telemetry.total_moves,
-                                   telemetry.progress_hint * 100.0));
+            frame.push_str(&format!(
+                "{}: {} comparisons, {} moves, {:.1}% complete\n",
+                algorithm.name(),
+                telemetry.total_comparisons,
+                telemetry.total_moves,
+                telemetry.progress_hint * 100.0
+            ));
         }
 
-        frame.push_str(&format!("Memory: {:.1}% ({} bytes)\n", 
-                               self.memory_monitor.usage_percentage(),
-                               self.memory_monitor.current_usage()));
+        frame.push_str(&format!(
+            "Memory: {:.1}% ({} bytes)\n",
+            self.memory_monitor.usage_percentage(),
+            self.memory_monitor.current_usage()
+        ));
 
         self.frame_count += 1;
         Ok(frame)
@@ -309,11 +322,11 @@ impl VisualizationTestRunner {
 
     pub fn run_until_complete(&mut self, max_frames: u64) -> Result<TestResults, String> {
         let mut results = TestResults::default();
-        
+
         while !self.pipeline.all_complete() && self.pipeline.get_frame_count() < max_frames {
             // Step algorithms
             self.pipeline.step_algorithms();
-            
+
             // Render frame
             match self.pipeline.render_frame() {
                 Ok(frame_content) => {
@@ -323,22 +336,25 @@ impl VisualizationTestRunner {
                 Err(error) => {
                     results.failed_frames += 1;
                     results.errors.push(error);
-                }
+                },
             }
-            
+
             // Record memory usage
             let current_usage = self.pipeline.get_memory_monitor().current_usage();
             if current_usage > results.peak_memory_usage {
                 results.peak_memory_usage = current_usage;
             }
         }
-        
+
         results.total_duration = self.start_time.elapsed();
         results.final_frame_count = self.pipeline.get_frame_count();
-        results.algorithms_completed = self.pipeline.algorithms.iter()
+        results.algorithms_completed = self
+            .pipeline
+            .algorithms
+            .iter()
             .filter(|alg| alg.is_complete())
             .count();
-        
+
         Ok(results)
     }
 
@@ -397,9 +413,8 @@ mod tests {
     fn test_frame_rate_limiting_25_to_35_fps() {
         // Test different target frame rates
         for target_fps in [25, 30, 35] {
-            let algorithms: Vec<Box<dyn Sorter>> = vec![
-                Box::new(MockSorter::new("Test Sort", vec![1, 2, 3, 4, 5])),
-            ];
+            let algorithms: Vec<Box<dyn Sorter>> =
+                vec![Box::new(MockSorter::new("Test Sort", vec![1, 2, 3, 4, 5]))];
             let pipeline = VisualizationPipeline::new(algorithms, target_fps, 5);
             let mut runner = VisualizationTestRunner::new(pipeline);
 
@@ -408,12 +423,20 @@ mod tests {
             let duration = start_time.elapsed();
 
             let actual_fps = results.average_fps();
-            
+
             // Allow some tolerance for frame rate (±5 FPS)
-            assert!(actual_fps >= (target_fps as f32) - 5.0, 
-                   "FPS too low: {} < {} - 5", actual_fps, target_fps);
-            assert!(actual_fps <= (target_fps as f32) + 5.0, 
-                   "FPS too high: {} > {} + 5", actual_fps, target_fps);
+            assert!(
+                actual_fps >= (target_fps as f32) - 5.0,
+                "FPS too low: {} < {} - 5",
+                actual_fps,
+                target_fps
+            );
+            assert!(
+                actual_fps <= (target_fps as f32) + 5.0,
+                "FPS too high: {} > {} + 5",
+                actual_fps,
+                target_fps
+            );
         }
     }
 
@@ -429,11 +452,13 @@ mod tests {
         let pipeline = VisualizationPipeline::new(algorithms, 30, memory_limit_mb);
         let mut runner = VisualizationTestRunner::new(pipeline);
 
-        let results = runner.run_until_complete(10).unwrap_or_else(|_| TestResults::default());
+        let results = runner
+            .run_until_complete(10)
+            .unwrap_or_else(|_| TestResults::default());
 
         // Should either complete successfully or fail gracefully
         let memory_limit_bytes = memory_limit_mb * 1024 * 1024;
-        
+
         if results.failed_frames > 0 {
             // If it failed, it should be due to memory limits
             assert!(results.peak_memory_usage >= memory_limit_bytes);
@@ -445,9 +470,10 @@ mod tests {
 
     #[test]
     fn test_responsive_to_terminal_resize() {
-        let algorithms: Vec<Box<dyn Sorter>> = vec![
-            Box::new(MockSorter::new("Resize Test", vec![1, 2, 3, 4, 5])),
-        ];
+        let algorithms: Vec<Box<dyn Sorter>> = vec![Box::new(MockSorter::new(
+            "Resize Test",
+            vec![1, 2, 3, 4, 5],
+        ))];
 
         let pipeline = VisualizationPipeline::new(algorithms, 30, 10);
         let mut runner = VisualizationTestRunner::new(pipeline);
@@ -476,15 +502,15 @@ mod tests {
         let mut limiter = FrameRateLimiter::new(30);
 
         let start_time = Instant::now();
-        
+
         // Render several frames
         for _ in 0..10 {
             limiter.limit_frame_rate();
         }
-        
+
         let duration = start_time.elapsed();
         let expected_duration = Duration::from_millis(10 * (1000 / 30)); // 10 frames at 30 FPS
-        
+
         // Allow some tolerance (±50ms)
         let tolerance = Duration::from_millis(50);
         assert!(duration >= expected_duration - tolerance);
@@ -530,7 +556,7 @@ mod tests {
         let mut runner = VisualizationTestRunner::new(pipeline);
 
         let results = runner.run_until_complete(5).unwrap();
-        
+
         // Should complete immediately since no algorithms to run
         assert_eq!(results.algorithms_completed, 0);
         assert_eq!(results.successful_frames, 5); // Should still render frames
@@ -553,7 +579,7 @@ mod tests {
         assert!(results.total_duration.as_millis() > 0);
         assert!(results.successful_frames > 0);
         assert_eq!(results.failed_frames, 0);
-        
+
         // Memory should be reasonable
         assert!(results.peak_memory_usage > 0);
         assert!(results.peak_memory_usage < 20 * 1024 * 1024); // Under 20MB limit
@@ -561,9 +587,8 @@ mod tests {
 
     #[test]
     fn test_extreme_terminal_sizes() {
-        let algorithms: Vec<Box<dyn Sorter>> = vec![
-            Box::new(MockSorter::new("Size Test", vec![1, 2, 3])),
-        ];
+        let algorithms: Vec<Box<dyn Sorter>> =
+            vec![Box::new(MockSorter::new("Size Test", vec![1, 2, 3]))];
 
         let pipeline = VisualizationPipeline::new(algorithms, 30, 10);
         let mut runner = VisualizationTestRunner::new(pipeline);
@@ -585,15 +610,16 @@ mod tests {
             Err(error) => {
                 // If it fails, should be due to memory limits
                 assert!(error.contains("Memory usage exceeded"));
-            }
+            },
         }
     }
 
     #[test]
     fn test_frame_content_includes_expected_elements() {
-        let algorithms: Vec<Box<dyn Sorter>> = vec![
-            Box::new(MockSorter::new("Content Test", vec![1, 2, 3, 4, 5])),
-        ];
+        let algorithms: Vec<Box<dyn Sorter>> = vec![Box::new(MockSorter::new(
+            "Content Test",
+            vec![1, 2, 3, 4, 5],
+        ))];
 
         let pipeline = VisualizationPipeline::new(algorithms, 30, 10);
         let mut runner = VisualizationTestRunner::new(pipeline);

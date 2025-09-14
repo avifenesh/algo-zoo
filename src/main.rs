@@ -13,21 +13,19 @@ use clap::Parser;
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use ratatui::{
+    Frame, Terminal,
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
-    Frame, Terminal,
 };
 use sorting_race::{
     lib::{
-        bar_chart::BarChart,
-        memory_graph::MemoryGraph,
-        progress::ProgressBars,
+        bar_chart::BarChart, memory_graph::MemoryGraph, progress::ProgressBars,
         sparkline::SparklineCollection,
     },
     models::{
@@ -36,10 +34,8 @@ use sorting_race::{
     },
     services::{
         fairness::{
-            comparison::ComparisonFairness,
+            adaptive::AdaptiveFairness, comparison::ComparisonFairness, walltime::WallTimeFairness,
             weighted::WeightedFairness,
-            walltime::WallTimeFairness,
-            adaptive::AdaptiveFairness,
         },
         generator::ArrayGenerator,
         sorters::{
@@ -102,9 +98,16 @@ fn main() -> Result<()> {
 
     // Parse fairness mode
     let fairness_mode = match args.fair.as_str() {
-        "weighted" => FairnessMode::Weighted { alpha: args.alpha, beta: args.beta },
-        "walltime" => FairnessMode::WallTime { slice_ms: DEFAULT_WALLTIME_SLICE_MS },
-        "adaptive" => FairnessMode::Adaptive { learning_rate: args.learning_rate },
+        "weighted" => FairnessMode::Weighted {
+            alpha: args.alpha,
+            beta: args.beta,
+        },
+        "walltime" => FairnessMode::WallTime {
+            slice_ms: DEFAULT_WALLTIME_SLICE_MS,
+        },
+        "adaptive" => FairnessMode::Adaptive {
+            learning_rate: args.learning_rate,
+        },
         _ => FairnessMode::ComparisonBudget { k: args.budget },
     };
 
@@ -179,7 +182,7 @@ fn run_app<B: ratatui::backend::Backend>(
     let mut last_tick = Instant::now();
     let tick_rate = Duration::from_millis(TICK_RATE_MS);
     let mut paused = false;
-    
+
     // Initialize visualization state
     let mut memory_graph = MemoryGraph::new();
     let mut sparklines = SparklineCollection::new(50, 1); // 50-point history
@@ -190,19 +193,32 @@ fn run_app<B: ratatui::backend::Backend>(
         for algo in &algorithms {
             let telemetry = algo.get_telemetry();
             let name = algo.name();
-            
+
             // Update memory graph
             memory_graph.update_algorithm(name, telemetry.memory_current);
-            
+
             // Update sparklines
-            sparklines.update(&format!("{}_comparisons", name), telemetry.total_comparisons as f64);
+            sparklines.update(
+                &format!("{}_comparisons", name),
+                telemetry.total_comparisons as f64,
+            );
             sparklines.update(&format!("{}_moves", name), telemetry.total_moves as f64);
-            
+
             // Update progress bars
             progress_bars.add_bar(name, telemetry.progress_hint);
         }
-        
-        terminal.draw(|f| ui::<B>(f, &algorithms, &config, paused, &memory_graph, &sparklines, &progress_bars))?;
+
+        terminal.draw(|f| {
+            ui::<B>(
+                f,
+                &algorithms,
+                &config,
+                paused,
+                &memory_graph,
+                &sparklines,
+                &progress_bars,
+            )
+        })?;
 
         let timeout = tick_rate
             .checked_sub(last_tick.elapsed())
@@ -218,8 +234,8 @@ fn run_app<B: ratatui::backend::Backend>(
                         for algo in &mut algorithms {
                             algo.reset(array.clone());
                         }
-                    }
-                    _ => {}
+                    },
+                    _ => {},
                 }
             }
         }
@@ -253,18 +269,26 @@ fn ui<B: ratatui::backend::Backend>(
         .direction(Direction::Vertical)
         .margin(1)
         .constraints([
-            Constraint::Length(3),  // Header
-            Constraint::Min(0),     // Body
-            Constraint::Length(3),  // Footer
+            Constraint::Length(3), // Header
+            Constraint::Min(0),    // Body
+            Constraint::Length(3), // Footer
         ])
         .split(f.area());
 
     // Header
     let header = Paragraph::new(vec![
         Line::from(vec![
-            Span::styled("Sorting Race", Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                "Sorting Race",
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
             Span::raw(" | "),
-            Span::raw(format!("Seed: {} | Size: {} | ", config.seed, config.array_size)),
+            Span::raw(format!(
+                "Seed: {} | Size: {} | ",
+                config.seed, config.array_size
+            )),
             if paused {
                 Span::styled("PAUSED", Style::default().fg(Color::Yellow))
             } else {
@@ -280,8 +304,8 @@ fn ui<B: ratatui::backend::Backend>(
     let body_chunks = Layout::default()
         .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Percentage(60),  // Visualizations
-            Constraint::Percentage(40),  // Data panels
+            Constraint::Percentage(60), // Visualizations
+            Constraint::Percentage(40), // Data panels
         ])
         .split(main_chunks[1]);
 
@@ -289,9 +313,9 @@ fn ui<B: ratatui::backend::Backend>(
     let vis_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Percentage(50),  // Bar chart area
-            Constraint::Percentage(25),  // Progress bars
-            Constraint::Percentage(25),  // Memory graph
+            Constraint::Percentage(50), // Bar chart area
+            Constraint::Percentage(25), // Progress bars
+            Constraint::Percentage(25), // Memory graph
         ])
         .split(body_chunks[0]);
 
@@ -299,14 +323,20 @@ fn ui<B: ratatui::backend::Backend>(
     if let Some(first_algo) = algorithms.first() {
         let telemetry = first_algo.get_telemetry();
         let array_data = first_algo.get_array();
-        
+
         let bar_chart = BarChart::from_array_with_colors(array_data, &telemetry.highlights)
             .scale_for_terminal(vis_chunks[0].width, vis_chunks[0].height)
-            .block(Block::default().borders(Borders::ALL).title(format!("Array View: {}", first_algo.name())));
-        
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title(format!("Array View: {}", first_algo.name())),
+            );
+
         f.render_widget(bar_chart, vis_chunks[0]);
     } else {
-        let empty_chart = Block::default().borders(Borders::ALL).title("Array View: No Algorithm");
+        let empty_chart = Block::default()
+            .borders(Borders::ALL)
+            .title("Array View: No Algorithm");
         f.render_widget(empty_chart, vis_chunks[0]);
     }
 
@@ -326,8 +356,8 @@ fn ui<B: ratatui::backend::Backend>(
     let data_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Percentage(50),  // Algorithm stats
-            Constraint::Percentage(50),  // Sparklines
+            Constraint::Percentage(50), // Algorithm stats
+            Constraint::Percentage(50), // Sparklines
         ])
         .split(body_chunks[1]);
 
@@ -336,12 +366,8 @@ fn ui<B: ratatui::backend::Backend>(
         .iter()
         .map(|algo| {
             let telemetry = algo.get_telemetry();
-            let status = if algo.is_complete() {
-                "✓"
-            } else {
-                "⟳"
-            };
-            
+            let status = if algo.is_complete() { "✓" } else { "⟳" };
+
             let content = vec![
                 Line::from(vec![
                     Span::styled(
@@ -369,15 +395,16 @@ fn ui<B: ratatui::backend::Backend>(
         })
         .collect();
 
-    let algorithms_list = List::new(items)
-        .block(Block::default().borders(Borders::ALL).title("Statistics"));
+    let algorithms_list =
+        List::new(items).block(Block::default().borders(Borders::ALL).title("Statistics"));
     f.render_widget(algorithms_list, data_chunks[0]);
 
     // Sparklines area (simplified text display)
     let sparkline_text = if sparklines.len() > 0 {
         let mut text_lines = Vec::new();
-        let algorithm_names: Vec<String> = algorithms.iter().map(|a| a.name().to_string()).collect();
-        
+        let algorithm_names: Vec<String> =
+            algorithms.iter().map(|a| a.name().to_string()).collect();
+
         for name in &algorithm_names {
             if let Some(comp_sparkline) = sparklines.get(&format!("{}_comparisons", name)) {
                 text_lines.push(Line::from(format!(
@@ -392,8 +419,11 @@ fn ui<B: ratatui::backend::Backend>(
         vec![Line::from("No sparkline data yet")]
     };
 
-    let sparklines_widget = Paragraph::new(sparkline_text)
-        .block(Block::default().borders(Borders::ALL).title("Metrics History"));
+    let sparklines_widget = Paragraph::new(sparkline_text).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .title("Metrics History"),
+    );
     f.render_widget(sparklines_widget, data_chunks[1]);
 
     // Footer
@@ -404,4 +434,3 @@ fn ui<B: ratatui::backend::Backend>(
     .block(Block::default().borders(Borders::ALL));
     f.render_widget(footer, main_chunks[2]);
 }
-

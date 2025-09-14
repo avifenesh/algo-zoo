@@ -1,22 +1,17 @@
 //! Edge case tests for sorting algorithms
 
-use sorting_race::services::sorters::{
-    bubble::BubbleSort,
-    heap::HeapSort,
-    insertion::InsertionSort,
-    merge::MergeSort,
-    quick::QuickSort,
-    selection::SelectionSort,
-    shell::ShellSort,
-};
 use sorting_race::models::traits::Sorter;
+use sorting_race::services::sorters::{
+    bubble::BubbleSort, heap::HeapSort, insertion::InsertionSort, merge::MergeSort,
+    quick::QuickSort, selection::SelectionSort, shell::ShellSort,
+};
 
 fn test_sorter_with_edge_cases(mut sorter: Box<dyn Sorter>) {
     // Test empty array
     sorter.reset(vec![]);
     assert!(sorter.is_complete());
     assert_eq!(sorter.get_array(), &[]);
-    
+
     // Test single element
     sorter.reset(vec![42]);
     let mut steps = 0;
@@ -26,7 +21,7 @@ fn test_sorter_with_edge_cases(mut sorter: Box<dyn Sorter>) {
     }
     assert!(sorter.is_complete());
     assert_eq!(sorter.get_array(), &[42]);
-    
+
     // Test two elements (already sorted)
     sorter.reset(vec![1, 2]);
     steps = 0;
@@ -36,7 +31,7 @@ fn test_sorter_with_edge_cases(mut sorter: Box<dyn Sorter>) {
     }
     assert!(sorter.is_complete());
     assert_eq!(sorter.get_array(), &[1, 2]);
-    
+
     // Test two elements (needs swap)
     sorter.reset(vec![2, 1]);
     steps = 0;
@@ -46,7 +41,7 @@ fn test_sorter_with_edge_cases(mut sorter: Box<dyn Sorter>) {
     }
     assert!(sorter.is_complete());
     assert_eq!(sorter.get_array(), &[1, 2]);
-    
+
     // Test three elements
     sorter.reset(vec![3, 1, 2]);
     steps = 0;
@@ -56,7 +51,7 @@ fn test_sorter_with_edge_cases(mut sorter: Box<dyn Sorter>) {
     }
     assert!(sorter.is_complete());
     assert_eq!(sorter.get_array(), &[1, 2, 3]);
-    
+
     // Test all same elements
     sorter.reset(vec![5, 5, 5, 5, 5]);
     steps = 0;
@@ -66,7 +61,7 @@ fn test_sorter_with_edge_cases(mut sorter: Box<dyn Sorter>) {
     }
     assert!(sorter.is_complete());
     assert_eq!(sorter.get_array(), &[5, 5, 5, 5, 5]);
-    
+
     // Test with negative numbers
     sorter.reset(vec![-3, -1, -2, 0, 1]);
     steps = 0;
@@ -117,7 +112,7 @@ fn test_shell_sort_edge_cases() {
 fn test_edge_case_with_minimal_budget() {
     let mut sorter = QuickSort::new();
     sorter.reset(vec![5, 2, 8, 1, 9]);
-    
+
     // Use budget of 1 - extreme edge case
     let mut steps = 0;
     while !sorter.is_complete() && steps < 100 {
@@ -125,7 +120,7 @@ fn test_edge_case_with_minimal_budget() {
         assert!(result.comparisons_used <= 1);
         steps += 1;
     }
-    
+
     assert!(sorter.is_complete());
     assert_eq!(sorter.get_array(), &[1, 2, 5, 8, 9]);
 }

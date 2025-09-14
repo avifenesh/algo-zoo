@@ -47,7 +47,7 @@ impl MetricsSparkline {
 
         let min_val = self.data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
         let max_val = self.data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-        
+
         // Avoid division by zero
         let range = if (max_val - min_val).abs() < f64::EPSILON {
             1.0
@@ -61,7 +61,7 @@ impl MetricsSparkline {
 
         let mut result = String::new();
         let points_to_show = self.data.len().min(self.width);
-        
+
         // Take the most recent data points that fit in the width
         let start_index = if self.data.len() > self.width {
             self.data.len() - self.width
@@ -137,11 +137,10 @@ impl MetricsSparkline {
         let max = self.data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
         let sum: f64 = self.data.iter().sum();
         let avg = sum / self.data.len() as f64;
-        
+
         // Calculate standard deviation
-        let variance: f64 = self.data.iter()
-            .map(|&x| (x - avg).powi(2))
-            .sum::<f64>() / self.data.len() as f64;
+        let variance: f64 =
+            self.data.iter().map(|&x| (x - avg).powi(2)).sum::<f64>() / self.data.len() as f64;
         let std_dev = variance.sqrt();
 
         SparklineStats {
@@ -157,13 +156,17 @@ impl MetricsSparkline {
     pub fn render_with_context(&self) -> String {
         let sparkline = self.render();
         let stats = self.get_stats();
-        
+
         if self.title.is_empty() {
-            format!("{} (min: {:.1}, max: {:.1}, avg: {:.1}{})", 
-                   sparkline, stats.min, stats.max, stats.avg, self.unit)
+            format!(
+                "{} (min: {:.1}, max: {:.1}, avg: {:.1}{})",
+                sparkline, stats.min, stats.max, stats.avg, self.unit
+            )
         } else {
-            format!("{}: {} (min: {:.1}, max: {:.1}, avg: {:.1}{})", 
-                   self.title, sparkline, stats.min, stats.max, stats.avg, self.unit)
+            format!(
+                "{}: {} (min: {:.1}, max: {:.1}, avg: {:.1}{})",
+                self.title, sparkline, stats.min, stats.max, stats.avg, self.unit
+            )
         }
     }
 }
@@ -198,12 +201,11 @@ impl SparklineCollection {
 
     /// Add or update a metric sparkline
     pub fn update_metric(&mut self, name: &str, value: f64) {
-        let sparkline = self.sparklines.entry(name.to_string())
-            .or_insert_with(|| {
-                MetricsSparkline::new(self.default_capacity)
-                    .with_width(self.default_width)
-                    .with_title(name)
-            });
+        let sparkline = self.sparklines.entry(name.to_string()).or_insert_with(|| {
+            MetricsSparkline::new(self.default_capacity)
+                .with_width(self.default_width)
+                .with_title(name)
+        });
         sparkline.add_point(value);
     }
 
@@ -262,15 +264,15 @@ mod tests {
     #[test]
     fn test_sparkline_data_collection_100_point_history() {
         let mut sparkline = MetricsSparkline::new(100);
-        
+
         // Add 100 points
         for i in 0..100 {
             sparkline.add_point(i as f64);
         }
-        
+
         assert_eq!(sparkline.len(), 100);
         assert_eq!(sparkline.capacity(), 100);
-        
+
         let data = sparkline.get_data();
         assert_eq!(data[0], 0.0);
         assert_eq!(data[99], 99.0);
@@ -279,12 +281,12 @@ mod tests {
     #[test]
     fn test_data_point_addition_and_overflow() {
         let mut sparkline = MetricsSparkline::new(5); // Small capacity for testing overflow
-        
+
         // Add more points than capacity
         for i in 0..10 {
             sparkline.add_point(i as f64);
         }
-        
+
         // Should only keep the last 5 points
         assert_eq!(sparkline.len(), 5);
         let data = sparkline.get_data();
@@ -294,20 +296,20 @@ mod tests {
     #[test]
     fn test_rendering_with_different_scales() {
         let mut sparkline = MetricsSparkline::new(10).with_width(10);
-        
+
         // Test linear scale
         for i in 1..=10 {
             sparkline.add_point(i as f64);
         }
         let linear_render = sparkline.render();
         assert_eq!(linear_render.chars().count(), 10);
-        
+
         // Test with different value ranges
         sparkline.clear();
         sparkline.add_point(1000.0);
         sparkline.add_point(2000.0);
         sparkline.add_point(3000.0);
-        
+
         let scaled_render = sparkline.render();
         assert_eq!(scaled_render.chars().count(), 10);
         // Should contain Unicode block characters
@@ -317,22 +319,22 @@ mod tests {
     #[test]
     fn test_multiple_sparklines_for_different_metrics() {
         let mut collection = SparklineCollection::new(50, 20);
-        
+
         // Add data for different metrics
         collection.update_metric("comparisons", 100.0);
         collection.update_metric("swaps", 50.0);
         collection.update_metric("memory_usage", 1024.0);
-        
+
         assert_eq!(collection.len(), 3);
-        
+
         let names = collection.get_names();
         assert_eq!(names, vec!["comparisons", "memory_usage", "swaps"]);
-        
+
         // Verify each sparkline exists and has data
         assert!(collection.get("comparisons").is_some());
         assert!(collection.get("swaps").is_some());
         assert!(collection.get("memory_usage").is_some());
-        
+
         let comparisons_sparkline = collection.get("comparisons").unwrap();
         assert_eq!(comparisons_sparkline.len(), 1);
         assert_eq!(comparisons_sparkline.get_data(), vec![100.0]);
@@ -341,19 +343,19 @@ mod tests {
     #[test]
     fn test_sparkline_stats_calculation() {
         let mut sparkline = MetricsSparkline::new(10);
-        
+
         // Add known values for testing stats
         let values = vec![1.0, 2.0, 3.0, 4.0, 5.0];
         for value in &values {
             sparkline.add_point(*value);
         }
-        
+
         let stats = sparkline.get_stats();
         assert_eq!(stats.min, 1.0);
         assert_eq!(stats.max, 5.0);
         assert_eq!(stats.avg, 3.0); // (1+2+3+4+5)/5 = 3
         assert_eq!(stats.count, 5);
-        
+
         // Standard deviation for [1,2,3,4,5] is sqrt(2) ≈ 1.414
         // Variance = ((1-3)² + (2-3)² + (3-3)² + (4-3)² + (5-3)²) / 5
         //          = (4 + 1 + 0 + 1 + 4) / 5 = 2
@@ -364,15 +366,15 @@ mod tests {
     #[test]
     fn test_sparkline_rendering_unicode_blocks() {
         let mut sparkline = MetricsSparkline::new(8).with_width(8);
-        
+
         // Add ascending values to test all Unicode blocks
         for i in 0..8 {
             sparkline.add_point(i as f64);
         }
-        
+
         let rendered = sparkline.render();
         assert_eq!(rendered.chars().count(), 8);
-        
+
         // Should contain the lowest and highest block characters
         assert!(rendered.contains('▁')); // Lowest block
         assert!(rendered.contains('█')); // Highest block
@@ -381,7 +383,7 @@ mod tests {
     #[test]
     fn test_empty_sparkline_rendering() {
         let sparkline = MetricsSparkline::new(10).with_width(5);
-        
+
         let rendered = sparkline.render();
         assert_eq!(rendered, "     "); // Should be spaces
         assert_eq!(rendered.len(), 5);
@@ -390,12 +392,12 @@ mod tests {
     #[test]
     fn test_sparkline_with_identical_values() {
         let mut sparkline = MetricsSparkline::new(5).with_width(5);
-        
+
         // Add identical values
         for _ in 0..5 {
             sparkline.add_point(42.0);
         }
-        
+
         let rendered = sparkline.render();
         assert_eq!(rendered.chars().count(), 5);
         // When all values are identical, they should all render as the same character
@@ -408,17 +410,17 @@ mod tests {
     #[test]
     fn test_sparkline_width_adjustment() {
         let mut sparkline = MetricsSparkline::new(100);
-        
+
         // Add more data points than the display width
         for i in 0..50 {
             sparkline.add_point(i as f64);
         }
-        
+
         // Set narrow width
         sparkline = sparkline.with_width(10);
         let rendered = sparkline.render();
         assert_eq!(rendered.chars().count(), 10);
-        
+
         // Should show only the most recent data points
         let data = sparkline.get_data();
         assert_eq!(data.len(), 50); // All data still stored
@@ -427,12 +429,12 @@ mod tests {
     #[test]
     fn test_sparkline_collection_updates() {
         let mut collection = SparklineCollection::new(10, 15);
-        
+
         // Update the same metric multiple times
         for i in 1..=5 {
             collection.update_metric("test_metric", i as f64);
         }
-        
+
         let sparkline = collection.get("test_metric").unwrap();
         assert_eq!(sparkline.len(), 5);
         assert_eq!(sparkline.get_data(), vec![1.0, 2.0, 3.0, 4.0, 5.0]);
@@ -444,11 +446,11 @@ mod tests {
             .with_width(5)
             .with_title("Test Metric")
             .with_unit("ms");
-        
+
         sparkline.add_point(10.0);
         sparkline.add_point(20.0);
         sparkline.add_point(30.0);
-        
+
         let rendered = sparkline.render_with_context();
         assert!(rendered.contains("Test Metric"));
         assert!(rendered.contains("ms"));
@@ -460,14 +462,14 @@ mod tests {
     #[test]
     fn test_collection_render_all() {
         let mut collection = SparklineCollection::new(5, 8);
-        
+
         collection.update_metric("metric_a", 10.0);
         collection.update_metric("metric_b", 20.0);
         collection.update_metric("metric_a", 15.0);
-        
+
         let all_rendered = collection.render_all();
         assert_eq!(all_rendered.len(), 2);
-        
+
         // Should be sorted by name
         assert!(all_rendered[0].starts_with("metric_a:"));
         assert!(all_rendered[1].starts_with("metric_b:"));
@@ -476,17 +478,17 @@ mod tests {
     #[test]
     fn test_sparkline_clear_functionality() {
         let mut sparkline = MetricsSparkline::new(10);
-        
+
         sparkline.add_point(1.0);
         sparkline.add_point(2.0);
         sparkline.add_point(3.0);
-        
+
         assert_eq!(sparkline.len(), 3);
-        
+
         sparkline.clear();
         assert_eq!(sparkline.len(), 0);
         assert!(sparkline.is_empty());
-        
+
         let stats = sparkline.get_stats();
         assert_eq!(stats.count, 0);
     }
@@ -494,15 +496,15 @@ mod tests {
     #[test]
     fn test_sparkline_extreme_values() {
         let mut sparkline = MetricsSparkline::new(5).with_width(5);
-        
+
         // Test with very large and very small values
         sparkline.add_point(f64::MIN / 2.0);
         sparkline.add_point(0.0);
         sparkline.add_point(f64::MAX / 2.0);
-        
+
         let rendered = sparkline.render();
         assert_eq!(rendered.chars().count(), 5);
-        
+
         // Should handle extreme values without panicking
         let stats = sparkline.get_stats();
         assert!(stats.min.is_finite());
