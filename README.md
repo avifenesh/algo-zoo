@@ -6,6 +6,8 @@ A beautiful terminal visualization that runs multiple sorting algorithms simulta
 
 ![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)
 ![Terminal](https://img.shields.io/badge/Terminal-4EAA25?style=for-the-badge&logo=GNU%20Bash&logoColor=white)
+[![Crates.io](https://img.shields.io/crates/v/sorting-race.svg)](https://crates.io/crates/sorting-race)
+[![GitHub Release](https://img.shields.io/github/v/release/avifenesh/algo-zoo)](https://github.com/avifenesh/algo-zoo/releases)
 
 ## ✨ Features
 
@@ -20,22 +22,43 @@ A beautiful terminal visualization that runs multiple sorting algorithms simulta
 
 ### Installation
 
-#### From Source
+#### 📦 Pre-built Binaries (Recommended)
+Download for your platform from [GitHub Releases](https://github.com/avifenesh/algo-zoo/releases):
+
+**Available Platforms:**
+- Linux (AMD64, ARM64) - `sorting-race-linux-*.tar.gz`
+- macOS (Intel, Apple Silicon) - `sorting-race-macos-*.tar.gz`  
+- Windows (AMD64) - `sorting-race-windows-amd64.zip`
+
+```bash
+# Linux/macOS - extract and run
+tar -xzf sorting-race-*-*.tar.gz
+./sorting-race
+
+# Windows - extract and run  
+sorting-race.exe
+```
+
+#### 🦀 Using Cargo
+Install from [crates.io](https://crates.io/crates/sorting-race) - requires Rust toolchain:
+```bash
+cargo install sorting-race
+sorting-race
+```
+
+#### 🔧 From Source
+For development or latest unreleased features:
 ```bash
 # Clone and build
-git clone https://github.com/yourusername/sorting-race.git
-cd sorting-race
+git clone https://github.com/avifenesh/algo-zoo.git
+cd algo-zoo
 cargo build --release
 
 # Run
 ./target/release/sorting-race
 ```
 
-#### Using Cargo
-```bash
-cargo install sorting-race
-sorting-race
-```
+> **💡 Tip**: Pre-built binaries are fastest to get started. Use Cargo install if you want automatic updates with `cargo install-update sorting-race`.
 
 ### Basic Usage
 
@@ -148,10 +171,11 @@ Test which algorithms maintain the relative order of equal elements.
 
 ## 🖥️ System Requirements
 
-- **OS**: Linux, macOS, Windows
-- **Terminal**: UTF-8 support with 256 colors
+- **OS**: Linux, macOS, Windows (x86_64, ARM64)
+- **Terminal**: UTF-8 support with 256 colors  
 - **Size**: Minimum 80×24 terminal recommended
-- **Binary Size**: ~2MB
+- **Binary Size**: ~2MB (no external dependencies)
+- **Rust**: Only required if building from source
 
 ## 🤝 Contributing
 
