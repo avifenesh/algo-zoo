@@ -2,14 +2,12 @@
 
 use crate::models::{
     configuration::{ConfigurationState, DistributionType},
-    traits::Sorter,
 };
 use anyhow::{Result, anyhow};
-use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
 /// Application mode states for the interactive interface
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ApplicationMode {
     /// User is setting parameters
     Configuration,
@@ -22,7 +20,7 @@ pub enum ApplicationMode {
 }
 
 /// Configuration field focus for interactive input
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ConfigurationField {
     ArraySize,
     Distribution,

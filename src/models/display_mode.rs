@@ -6,10 +6,8 @@ use crate::models::{
 };
 use anyhow::{Result, anyhow};
 use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
-use serde::{Deserialize, Serialize};
-
 /// Controls which algorithm's array visualization is shown
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct DisplayMode {
     /// Currently viewed algorithm
     pub viewed_algorithm: AlgorithmType,
@@ -97,7 +95,7 @@ impl DisplayMode {
     }
 
     /// Get current array data from algorithm instances
-    pub fn get_current_array_data(&self, algorithms: &[Box<dyn Sorter>]) -> Option<&[i32]> {
+    pub fn get_current_array_data<'a>(&self, algorithms: &'a [Box<dyn Sorter>]) -> Option<&'a [i32]> {
         // Find the algorithm that matches our viewed algorithm
         for (i, algorithm) in algorithms.iter().enumerate() {
             if let Some(expected_type) = AlgorithmType::from_index(i) {
@@ -367,7 +365,7 @@ mod tests {
             code: KeyCode::Char('v'),
             modifiers: KeyModifiers::NONE,
             kind: KeyEventKind::Press,
-            state: Default::default(),
+            state: crossterm::event::KeyEventState::empty(),
         };
         
         let initial_algorithm = display.viewed_algorithm;
@@ -381,7 +379,7 @@ mod tests {
             code: KeyCode::Char('x'),
             modifiers: KeyModifiers::NONE,
             kind: KeyEventKind::Press,
-            state: Default::default(),
+            state: crossterm::event::KeyEventState::empty(),
         };
         
         let handled = display.process_key_event(other_key).unwrap();

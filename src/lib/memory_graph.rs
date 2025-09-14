@@ -14,6 +14,7 @@ pub struct MemoryData {
     pub current: usize,
     pub peak: usize,
     pub history: Vec<usize>,
+    pub has_started: bool,  // Track if algorithm has started processing
 }
 
 impl MemoryData {
@@ -22,19 +23,32 @@ impl MemoryData {
             current: 0,
             peak: 0,
             history: Vec::new(),
+            has_started: false,
         }
     }
 
     pub fn update(&mut self, current: usize, max_history: usize) {
+        // Mark as started when we get first non-zero update
+        if current > 0 && !self.has_started {
+            self.has_started = true;
+        }
+
         self.current = current;
         if current > self.peak {
             self.peak = current;
         }
-        
+
         self.history.push(current);
         if self.history.len() > max_history {
             self.history.remove(0);
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.current = 0;
+        self.peak = 0;
+        self.history.clear();
+        self.has_started = false;
     }
 }
 
@@ -133,9 +147,21 @@ impl MemoryGraph {
         self.data.keys().collect()
     }
 
+    /// Check if the memory graph has any data
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
+    }
+
     /// Clear all data
     pub fn clear(&mut self) {
         self.data.clear();
+    }
+
+    /// Reset all algorithms' memory data (for race restart)
+    pub fn reset_all(&mut self) {
+        for data in self.data.values_mut() {
+            data.reset();
+        }
     }
 
     /// Format bytes into human readable string
@@ -171,10 +197,24 @@ impl MemoryGraph {
         };
 
         if self.data.is_empty() {
+            // Show "no data" message in the middle of the area
+            let msg = "No memory data available";
+            let msg_x = inner_area.left() + (inner_area.width.saturating_sub(msg.len() as u16)) / 2;
+            let msg_y = inner_area.top() + inner_area.height / 2;
+
+            for (i, ch) in msg.chars().enumerate() {
+                let x = msg_x + i as u16;
+                if x < inner_area.right() && msg_y < inner_area.bottom() {
+                    buf[(x, msg_y)]
+                        .set_symbol(&ch.to_string())
+                        .set_style(self.style);
+                }
+            }
             return;
         }
 
-        let algorithms: Vec<_> = self.data.keys().cloned().collect();
+        let mut algorithms: Vec<_> = self.data.keys().cloned().collect();
+        algorithms.sort(); // Sort for consistent display order
         let algorithm_count = algorithms.len();
         
         if algorithm_count == 0 {
@@ -222,9 +262,14 @@ impl MemoryGraph {
                     let bar_y = y_start + 1;
                     let available_width = inner_area.width.saturating_sub(15); // Leave space for values
                     
-                    // Current memory bar
-                    if max_memory > 0 {
-                        let current_width = ((memory_data.current as f64 / max_memory as f64) * available_width as f64) as u16;
+                    // Current memory bar - only show if algorithm has started
+                    if max_memory > 0 && memory_data.has_started {
+                        let current_width = if memory_data.current > 0 {
+                            // Ensure at least 1 character width for any non-zero memory
+                            ((memory_data.current as f64 / max_memory as f64) * available_width as f64).max(1.0) as u16
+                        } else {
+                            0
+                        };
                         for x in 0..current_width {
                             let char_x = inner_area.left() + x;
                             if char_x < inner_area.right() && bar_y < inner_area.bottom() {
@@ -248,14 +293,14 @@ impl MemoryGraph {
                         }
                     }
 
-                    // Show values if enabled
-                    if self.show_values {
+                    // Show values if enabled and algorithm has started
+                    if self.show_values && memory_data.has_started {
                         let values_x = inner_area.right().saturating_sub(14);
                         if values_x > inner_area.left() {
                             let current_str = Self::format_bytes(memory_data.current);
                             let peak_str = Self::format_bytes(memory_data.peak);
                             let value_text = format!("{}/{}", current_str, peak_str);
-                            
+
                             for (char_idx, ch) in value_text.chars().enumerate() {
                                 let char_x = values_x + char_idx as u16;
                                 if char_x < inner_area.right() && bar_y < inner_area.bottom() {
@@ -264,6 +309,14 @@ impl MemoryGraph {
                                         .set_style(self.style);
                                 }
                             }
+                        }
+                    } else if self.show_values && !memory_data.has_started {
+                        // Show "-" for algorithms that haven't started
+                        let values_x = inner_area.right().saturating_sub(14);
+                        if values_x > inner_area.left() && bar_y < inner_area.bottom() {
+                            buf[(values_x, bar_y)]
+                                .set_symbol("-")
+                                .set_style(self.style);
                         }
                     }
                 }

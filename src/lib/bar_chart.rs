@@ -109,12 +109,12 @@ impl BarChart {
         let data: Vec<(String, u64)> = array
             .iter()
             .enumerate()
-            .map(|(i, &value)| (i.to_string(), value.max(0) as u64))
+            .map(|(_i, &value)| (value.to_string(), value.max(0) as u64))
             .collect();
 
         let mut chart = Self::new(data);
         chart.highlight_indices = highlights.to_vec();
-        
+
         // Set colors based on operation type (compare vs swap)
         if highlights.len() == 2 {
             // Two highlights indicate a comparison
@@ -127,19 +127,185 @@ impl BarChart {
         chart
     }
 
+    /// Create a compact visualization using blocks instead of numbers for very large arrays
+    pub fn from_array_compact(array: &[i32], highlights: &[usize], terminal_width: u16) -> (Self, String) {
+        let array_len = array.len();
+        let available_width = terminal_width.saturating_sub(4) as usize;
+
+        // Sample the array if needed
+        let (sampled_data, sample_rate) = if array_len <= available_width {
+            // Can show all elements
+            (array.to_vec(), 1)
+        } else {
+            // Need to sample
+            let sample_rate = (array_len + available_width - 1) / available_width;
+            let sampled: Vec<i32> = (0..available_width)
+                .map(|i| {
+                    let idx = (i * sample_rate).min(array_len - 1);
+                    array[idx]
+                })
+                .collect();
+            (sampled, sample_rate)
+        };
+
+        // Find min/max for normalization
+        let min_val = *sampled_data.iter().min().unwrap_or(&0);
+        let max_val = *sampled_data.iter().max().unwrap_or(&1);
+        let range = (max_val - min_val).max(1) as f64;
+
+        // Create bar chart data using block characters
+        let data: Vec<(String, u64)> = sampled_data
+            .iter()
+            .map(|&value| {
+                // Use block characters to show value intensity
+                let normalized = ((value - min_val) as f64 / range * 8.0) as usize;
+                let block_char = match normalized {
+                    0 => " ",
+                    1 => "▁",
+                    2 => "▂",
+                    3 => "▃",
+                    4 => "▄",
+                    5 => "▅",
+                    6 => "▆",
+                    7 => "▇",
+                    _ => "█",
+                };
+                (block_char.to_string(), value.max(0) as u64)
+            })
+            .collect();
+
+        let mut chart = Self::new(data);
+
+        // Adjust highlights for sampling
+        if sample_rate > 1 {
+            chart.highlight_indices = highlights
+                .iter()
+                .map(|&idx| idx / sample_rate)
+                .filter(|&idx| idx < available_width)
+                .collect();
+        } else {
+            chart.highlight_indices = highlights.to_vec();
+        }
+
+        let indicator = if sample_rate > 1 {
+            format!("[Compact view: 1:{} sampling of {} elements]", sample_rate, array_len)
+        } else {
+            format!("[Compact view: {} elements]", array_len)
+        };
+
+        (chart, indicator)
+    }
+
+    /// Create a viewport view of large arrays
+    pub fn from_array_with_viewport(
+        array: &[i32],
+        highlights: &[usize],
+        terminal_width: u16,
+        viewport_center: Option<usize>
+    ) -> (Self, String) {
+        let array_len = array.len();
+
+        // For very large arrays, use compact mode
+        if array_len > 500 {
+            return Self::from_array_compact(array, highlights, terminal_width);
+        }
+
+        // Calculate how many elements can fit
+        let max_elements = (terminal_width / 4).min(100) as usize; // At least 4 chars per element
+
+        // Determine viewport range
+        let array_len = array.len();
+        let (start, end) = if array_len <= max_elements {
+            // Array fits entirely
+            (0, array_len)
+        } else {
+            // Need viewport
+            let center = viewport_center
+                .or_else(|| highlights.first().copied())  // Center on first highlight
+                .unwrap_or(array_len / 2);  // Or center of array
+
+            let half_view = max_elements / 2;
+            let start = center.saturating_sub(half_view);
+            let end = (start + max_elements).min(array_len);
+
+            // Adjust if we hit the end
+            let start = if end == array_len {
+                array_len.saturating_sub(max_elements)
+            } else {
+                start
+            };
+
+            (start, end)
+        };
+
+        // Create data for visible portion
+        let visible_data: Vec<(String, u64)> = array[start..end]
+            .iter()
+            .map(|&value| (value.to_string(), value.max(0) as u64))
+            .collect();
+
+        let mut chart = Self::new(visible_data);
+
+        // Adjust highlight indices to viewport
+        chart.highlight_indices = highlights
+            .iter()
+            .filter_map(|&idx| {
+                if idx >= start && idx < end {
+                    Some(idx - start)
+                } else {
+                    None
+                }
+            })
+            .collect();
+
+        // Set colors based on operation type
+        if highlights.len() == 2 {
+            chart = chart.bar_style(Style::default().fg(Color::Blue));
+        } else if highlights.len() == 1 {
+            chart = chart.bar_style(Style::default().fg(Color::Red));
+        }
+
+        // Create viewport indicator
+        let indicator = if array_len > max_elements {
+            format!("[Showing {}-{} of {}]", start + 1, end, array_len)
+        } else {
+            String::new()
+        };
+
+        (chart, indicator)
+    }
+
     /// Scale the chart for different terminal sizes
     pub fn scale_for_terminal(mut self, terminal_width: u16, terminal_height: u16) -> Self {
         // Calculate appropriate bar width and max height based on terminal size
         let available_width = terminal_width.saturating_sub(4); // Leave margins
         let bar_count = self.data.len() as u16;
-        
+
         if bar_count > 0 {
-            let total_width_needed = bar_count * (self.bar_width + self.bar_gap);
-            if total_width_needed > available_width {
-                // Scale down bar width and gap
-                let new_bar_width = (available_width / bar_count).saturating_sub(1).max(1);
-                self.bar_width = new_bar_width;
-                self.bar_gap = if new_bar_width > 1 { 1 } else { 0 };
+            // Find the maximum number of digits needed for any value
+            let max_digits = self.data.iter()
+                .map(|(_, value)| value.to_string().len() as u16)
+                .max()
+                .unwrap_or(1);
+
+            // Calculate minimum space needed per element (label + at least 1 space)
+            let min_label_space = max_digits + 1; // Number digits + separator space
+            let min_bar_width = max_digits.max(2); // At least 2 for the bar visual
+
+            // Check if we have enough space for readable labels
+            let total_label_space_needed = bar_count * min_label_space;
+            if total_label_space_needed > available_width {
+                // Terminal too narrow for readable labels - fall back to compressed mode
+                let space_per_element = (available_width / bar_count).max(1);
+                self.bar_width = (space_per_element.saturating_sub(1)).max(1);
+                self.bar_gap = if space_per_element > 1 { 1 } else { 0 };
+            } else {
+                // We have space for readable labels - prioritize label space
+                let remaining_space = available_width - total_label_space_needed;
+                let extra_bar_width = remaining_space / bar_count;
+
+                self.bar_width = min_bar_width + extra_bar_width;
+                self.bar_gap = 1; // Always have at least 1 space between elements
             }
         }
 
@@ -218,9 +384,24 @@ impl BarChart {
                 let value_y = inner_area.bottom().saturating_sub(2 + bar_height);
                 if value_y > inner_area.top() {
                     let value_str = value.to_string();
-                    let value_x = x_offset + (self.bar_width.saturating_sub(value_str.len() as u16)) / 2;
-                    
-                    for (char_idx, ch) in value_str.chars().enumerate() {
+
+                    // If value is too long for bar width, truncate or adjust positioning
+                    let display_str = if value_str.len() as u16 > self.bar_width {
+                        // For very long numbers, just show the full number starting at x_offset
+                        value_str
+                    } else {
+                        value_str
+                    };
+
+                    let value_x = if display_str.len() as u16 <= self.bar_width {
+                        // Center the value within the bar
+                        x_offset + (self.bar_width.saturating_sub(display_str.len() as u16)) / 2
+                    } else {
+                        // Start at bar position, but allow overflow to the right
+                        x_offset
+                    };
+
+                    for (char_idx, ch) in display_str.chars().enumerate() {
                         let char_x = value_x + char_idx as u16;
                         if char_x < inner_area.right() && value_y >= inner_area.top() {
                             buf[(char_x, value_y.saturating_sub(1))]
@@ -231,17 +412,21 @@ impl BarChart {
                 }
             }
 
-            // Render label at bottom
+            // Render label at bottom with improved spacing
             let label_y = inner_area.bottom().saturating_sub(1);
             if label_y >= inner_area.top() && label_y < inner_area.bottom() {
-                let label_display = if label.len() > self.bar_width as usize {
-                    &label[..self.bar_width as usize]
+                let label_display = label.as_str();
+
+                // Calculate label position with better spacing logic
+                let label_x = if label_display.len() as u16 <= self.bar_width {
+                    // Center within bar if it fits
+                    x_offset + (self.bar_width.saturating_sub(label_display.len() as u16)) / 2
                 } else {
-                    label
+                    // Start at bar position but allow overflow
+                    x_offset
                 };
-                
-                let label_x = x_offset + (self.bar_width.saturating_sub(label_display.len() as u16)) / 2;
-                
+
+                // Render the label with a trailing space for separation
                 for (char_idx, ch) in label_display.chars().enumerate() {
                     let char_x = label_x + char_idx as u16;
                     if char_x < inner_area.right() {
@@ -250,9 +435,21 @@ impl BarChart {
                             .set_style(self.label_style);
                     }
                 }
+
+                // Always add a space separator after the label if there's room
+                // This ensures multi-digit numbers don't run together
+                let space_x = label_x + label_display.len() as u16;
+                if space_x < inner_area.right() {
+                    buf[(space_x, label_y)]
+                        .set_symbol(" ")
+                        .set_style(self.label_style);
+                }
             }
 
-            x_offset += self.bar_width + self.bar_gap;
+            // Advance x_offset by the maximum of bar width or label width to prevent overlap
+            let label_width = label.len() as u16 + 1; // Label plus space
+            let min_advance = label_width.max(self.bar_width + self.bar_gap);
+            x_offset += min_advance;
         }
     }
 
@@ -292,9 +489,9 @@ mod tests {
         let chart = BarChart::from_array_with_colors(&array_data, &highlights);
         
         assert_eq!(chart.data.len(), 6);
-        assert_eq!(chart.data[0], ("0".to_string(), 5));
-        assert_eq!(chart.data[1], ("1".to_string(), 3));
-        assert_eq!(chart.data[4], ("4".to_string(), 9));
+        assert_eq!(chart.data[0], ("5".to_string(), 5));
+        assert_eq!(chart.data[1], ("3".to_string(), 3));
+        assert_eq!(chart.data[4], ("9".to_string(), 9));
     }
 
     #[test]
@@ -402,10 +599,10 @@ mod tests {
         let highlights = vec![];
         let chart = BarChart::from_array_with_colors(&array_data, &highlights);
         
-        // Negative values should be converted to 0
-        assert_eq!(chart.data[0], ("0".to_string(), 0));
-        assert_eq!(chart.data[1], ("1".to_string(), 3));
-        assert_eq!(chart.data[2], ("2".to_string(), 0));
-        assert_eq!(chart.data[3], ("3".to_string(), 8));
+        // Negative values should show the value as label but 0 height
+        assert_eq!(chart.data[0], ("-5".to_string(), 0));
+        assert_eq!(chart.data[1], ("3".to_string(), 3));
+        assert_eq!(chart.data[2], ("-1".to_string(), 0));
+        assert_eq!(chart.data[3], ("8".to_string(), 8));
     }
 }

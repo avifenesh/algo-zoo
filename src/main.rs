@@ -25,11 +25,14 @@ use ratatui::{
 };
 use sorting_race::{
     lib::{
-        bar_chart::BarChart, memory_graph::MemoryGraph, progress::ProgressBars,
+        bar_chart::BarChart, interactive::InteractiveConfigMenu, memory_graph::MemoryGraph, progress::ProgressBars,
         sparkline::SparklineCollection,
     },
     models::{
         config::{Distribution, FairnessMode, RunConfiguration},
+        configuration::ConfigurationState,
+        interactive_mode::ApplicationMode,
+        session::SessionState,
         traits::{FairnessModel, Sorter},
     },
     services::{
@@ -146,13 +149,33 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+fn create_fairness_model(fairness_mode: &FairnessMode) -> Box<dyn FairnessModel> {
+    match fairness_mode {
+        FairnessMode::ComparisonBudget { k } => Box::new(ComparisonFairness::new(*k)),
+        FairnessMode::Weighted { alpha, beta } => Box::new(WeightedFairness::new(*alpha, *beta)),
+        FairnessMode::WallTime { slice_ms } => Box::new(WallTimeFairness::new(*slice_ms)),
+        FairnessMode::Adaptive { learning_rate } => Box::new(AdaptiveFairness::new(*learning_rate)),
+        FairnessMode::EqualSteps => Box::new(ComparisonFairness::new(1)), // Fallback
+    }
+}
+
 fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     config: RunConfiguration,
 ) -> Result<()> {
+    // Initialize interactive configuration menu
+    let config_state = ConfigurationState::from_run_config(&config);
+    let mut interactive_menu = InteractiveConfigMenu::new();
+    interactive_menu.config_state = config_state;
+    let mut session_state = SessionState::new();
+    let mut current_config = config;
+
+    // Force start in Configuration mode for interactive experience
+    interactive_menu.interactive_mode.current_mode = ApplicationMode::Configuration;
+
     // Generate initial array
-    let generator = ArrayGenerator::new(config.seed);
-    let array = generator.generate(config.array_size, &config.distribution);
+    let generator = ArrayGenerator::new(current_config.seed);
+    let mut array = generator.generate(current_config.array_size, &current_config.distribution);
 
     // Initialize sorting algorithms
     let mut algorithms: Vec<Box<dyn Sorter>> = vec![
@@ -171,18 +194,13 @@ fn run_app<B: ratatui::backend::Backend>(
     }
 
     // Create fairness model based on configuration
-    let fairness: Box<dyn FairnessModel> = match &config.fairness_mode {
-        FairnessMode::ComparisonBudget { k } => Box::new(ComparisonFairness::new(*k)),
-        FairnessMode::Weighted { alpha, beta } => Box::new(WeightedFairness::new(*alpha, *beta)),
-        FairnessMode::WallTime { slice_ms } => Box::new(WallTimeFairness::new(*slice_ms)),
-        FairnessMode::Adaptive { learning_rate } => Box::new(AdaptiveFairness::new(*learning_rate)),
-        FairnessMode::EqualSteps => Box::new(ComparisonFairness::new(1)), // Fallback
-    };
+    let mut fairness: Box<dyn FairnessModel> = create_fairness_model(&current_config.fairness_mode);
 
     let mut last_tick = Instant::now();
     let tick_rate = Duration::from_millis(TICK_RATE_MS);
     let mut paused = false;
-    let mut selected_algorithm_index = 0; // Track which algorithm to display
+    // Remove this - use interactive_menu.interactive_mode.array_view_algorithm instead
+    // let mut selected_algorithm_index = 0; // Track which algorithm to display
 
     // Initialize visualization state
     let mut memory_graph = MemoryGraph::new();
@@ -217,16 +235,23 @@ fn run_app<B: ratatui::backend::Backend>(
         }
 
         terminal.draw(|f| {
-            ui::<B>(
-                f,
-                &algorithms,
-                &config,
-                paused,
-                selected_algorithm_index,
-                &memory_graph,
-                &sparklines,
-                &progress_bars,
-            )
+            // Check if we should render the interactive menu overlay
+            if !interactive_menu.is_racing() {
+                // Render the actual interactive menu
+                let area = f.area();
+                interactive_menu.render(area, &mut f.buffer_mut());
+            } else {
+                ui::<B>(
+                    f,
+                    &algorithms,
+                    &current_config,
+                    paused,
+                    interactive_menu.interactive_mode.array_view_algorithm,
+                    &memory_graph,
+                    &sparklines,
+                    &progress_bars,
+                );
+            }
         })?;
 
         let timeout = tick_rate
@@ -235,26 +260,80 @@ fn run_app<B: ratatui::backend::Backend>(
 
         if crossterm::event::poll(timeout)? {
             if let Event::Key(key) = event::read()? {
-                match key.code {
-                    KeyCode::Char('q') => return Ok(()),
-                    KeyCode::Char(' ') => paused = !paused,
-                    KeyCode::Char('v') => {
-                        // Switch to next algorithm for array visualization
-                        selected_algorithm_index = (selected_algorithm_index + 1) % algorithms.len();
-                    },
-                    KeyCode::Char('r') => {
-                        // Reset with same seed
-                        for algo in &mut algorithms {
-                            algo.reset(array.clone());
+                // Always handle interactive menu events
+                let menu_handled = interactive_menu.handle_key_event(key)?;
+
+                // Check if we just transitioned to racing mode
+                if interactive_menu.should_start_new_race() {
+                    if let Some(new_run_config) = interactive_menu.get_run_config() {
+                            current_config = new_run_config;
+
+                            // Regenerate array with new configuration
+                            let generator = ArrayGenerator::new(current_config.seed);
+                            array = generator.generate(current_config.array_size, &current_config.distribution);
+
+                            // Reset all algorithms with new array
+                            for algo in &mut algorithms {
+                                algo.reset(array.clone());
+                            }
+
+                            // Create new fairness model
+                            fairness = create_fairness_model(&current_config.fairness_mode);
+
+                            // Reset visualization state
+                            memory_graph.reset_all();  // Reset memory data but keep algorithm names
+                            sparklines = SparklineCollection::new(50, 1);
+                            progress_bars = ProgressBars::new();
+
+                            // Start new race
+                            let _ = session_state.start_new_race();
+
+                            // Unpause to start the race
+                            paused = false;
                         }
-                    },
-                    _ => {},
+                    }
+
+
+                    // Handle additional key events not handled by menu
+                    if !menu_handled {
+                        match key.code {
+                            KeyCode::Char('q') => return Ok(()),
+                            KeyCode::Char('r') => {
+                            // Reset with same seed
+                            for algo in &mut algorithms {
+                                algo.reset(array.clone());
+                            }
+                            // Reset memory tracking
+                            memory_graph.reset_all();
+                        },
+                        KeyCode::Char('k') | KeyCode::Char('b') | KeyCode::Char('f') => {
+                            // Enter configuration mode
+                            interactive_menu.interactive_mode.current_mode = ApplicationMode::Configuration;
+                            paused = true; // Pause the race
+
+                            // Set specific focus based on key
+                            use sorting_race::models::interactive_mode::ConfigurationField;
+                            match key.code {
+                                KeyCode::Char('k') => {
+                                    interactive_menu.interactive_mode.set_config_focus(ConfigurationField::ArraySize)?;
+                                },
+                                KeyCode::Char('b') => {
+                                    interactive_menu.interactive_mode.set_config_focus(ConfigurationField::Distribution)?;
+                                },
+                                KeyCode::Char('f') => {
+                                    interactive_menu.interactive_mode.set_config_focus(ConfigurationField::FairnessMode)?;
+                                },
+                                _ => {}
+                            }
+                        },
+                        _ => {},
+                    }
                 }
             }
         }
 
         if last_tick.elapsed() >= tick_rate {
-            if !paused {
+            if interactive_menu.is_racing() && !paused {
                 // Step all algorithms
                 let budgets = fairness.allocate_budget(&algorithms);
                 for (algo, budget) in algorithms.iter_mut().zip(budgets.iter()) {
@@ -310,70 +389,72 @@ fn ui<B: ratatui::backend::Backend>(
             },
         ]),
         Line::from("Press 'q' to quit, SPACE to pause/resume, 'v' to switch array view, 'r' to restart"),
+        Line::from("Interactive: 'k' for array size, 'b' for distribution, 'f' for fairness mode"),
     ])
     .block(Block::default().borders(Borders::ALL));
     f.render_widget(header, main_chunks[0]);
 
-    // Body layout: left (visualizations) and right (data)
+    // Body layout: array view at top, progress in middle, bottom panels at bottom
     let body_chunks = Layout::default()
-        .direction(Direction::Horizontal)
+        .direction(Direction::Vertical)
         .constraints([
-            Constraint::Percentage(60), // Visualizations
-            Constraint::Percentage(40), // Data panels
+            Constraint::Length(10),     // Array view (full width)
+            Constraint::Length(8),      // Progress bars (full width)
+            Constraint::Min(0),         // Bottom panels (stats, metrics, memory)
         ])
         .split(main_chunks[1]);
 
-    // Left side: visualizations (split vertically)
-    let vis_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage(50), // Bar chart area
-            Constraint::Percentage(25), // Progress bars
-            Constraint::Percentage(25), // Memory graph
-        ])
-        .split(body_chunks[0]);
-
-    // Render bar chart for the selected algorithm
+    // Render bar chart for the selected algorithm (full width at top)
     if let Some(selected_algo) = algorithms.get(selected_algorithm_index) {
         let telemetry = selected_algo.get_telemetry();
         let array_data = selected_algo.get_array();
 
-        let bar_chart = BarChart::from_array_with_colors(array_data, &telemetry.highlights)
-            .scale_for_terminal(vis_chunks[0].width, vis_chunks[0].height)
+        // Use viewport mode for large arrays
+        let (bar_chart, viewport_indicator) = BarChart::from_array_with_viewport(
+            array_data,
+            &telemetry.highlights,
+            body_chunks[0].width,
+            telemetry.highlights.first().copied()  // Center on first highlight
+        );
+
+        let title = if viewport_indicator.is_empty() {
+            format!("Array View: {} (Press 'v' to switch)", selected_algo.name())
+        } else {
+            format!("Array View: {} {} (Press 'v' to switch)",
+                    selected_algo.name(), viewport_indicator)
+        };
+
+        let bar_chart = bar_chart
+            .scale_for_terminal(body_chunks[0].width, body_chunks[0].height)
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(format!("Array View: {} (Press 'v' to switch)", selected_algo.name())),
+                    .title(title),
             );
 
-        f.render_widget(bar_chart, vis_chunks[0]);
+        f.render_widget(bar_chart, body_chunks[0]);
     } else {
         let empty_chart = Block::default()
             .borders(Borders::ALL)
             .title("Array View: No Algorithm");
-        f.render_widget(empty_chart, vis_chunks[0]);
+        f.render_widget(empty_chart, body_chunks[0]);
     }
 
-    // Progress bars
+    // Progress bars (full width in middle)
     let progress_widget = progress_bars
         .clone()
         .block(Block::default().borders(Borders::ALL).title("Progress"));
-    f.render_widget(progress_widget, vis_chunks[1]);
+    f.render_widget(progress_widget, body_chunks[1]);
 
-    // Memory graph
-    let memory_widget = memory_graph
-        .clone()
-        .block(Block::default().borders(Borders::ALL).title("Memory Usage"));
-    f.render_widget(memory_widget, vis_chunks[2]);
-
-    // Right side: data panels (split vertically)
-    let data_chunks = Layout::default()
-        .direction(Direction::Vertical)
+    // Bottom panels: split horizontally into three sections
+    let bottom_chunks = Layout::default()
+        .direction(Direction::Horizontal)
         .constraints([
-            Constraint::Percentage(50), // Algorithm stats
-            Constraint::Percentage(50), // Sparklines
+            Constraint::Percentage(33), // Algorithm stats
+            Constraint::Percentage(34), // Sparklines/Metrics
+            Constraint::Percentage(33), // Memory graph
         ])
-        .split(body_chunks[1]);
+        .split(body_chunks[2]);
 
     // Algorithm statistics list
     let items: Vec<ListItem> = algorithms
@@ -421,7 +502,7 @@ fn ui<B: ratatui::backend::Backend>(
 
     let algorithms_list =
         List::new(items).block(Block::default().borders(Borders::ALL).title("Statistics"));
-    f.render_widget(algorithms_list, data_chunks[0]);
+    f.render_widget(algorithms_list, bottom_chunks[0]);
 
     // Sparklines area (simplified text display)
     let sparkline_text = if sparklines.len() > 0 {
@@ -448,7 +529,18 @@ fn ui<B: ratatui::backend::Backend>(
             .borders(Borders::ALL)
             .title("Metrics History"),
     );
-    f.render_widget(sparklines_widget, data_chunks[1]);
+    f.render_widget(sparklines_widget, bottom_chunks[1]);
+
+    // Memory graph in the third bottom panel
+    let memory_title = if memory_graph.is_empty() {
+        "Memory Usage (No data yet - press Space to start race)"
+    } else {
+        "Memory Usage"
+    };
+    let memory_widget = memory_graph
+        .clone()
+        .block(Block::default().borders(Borders::ALL).title(memory_title));
+    f.render_widget(memory_widget, bottom_chunks[2]);
 
     // Footer
     let footer = Paragraph::new(format!(

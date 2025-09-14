@@ -1,12 +1,11 @@
 //! Memory metrics model for real-time memory tracking
 
 use crate::models::session::AlgorithmType;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Instant;
 
 /// Memory metrics for a single algorithm
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct MemoryMetrics {
     /// Algorithm this metric belongs to
     pub algorithm_type: AlgorithmType,

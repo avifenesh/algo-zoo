@@ -5,11 +5,10 @@ use crate::models::{
     config::FairnessMode,
     traits::Sorter,
 };
-use serde::{Deserialize, Serialize};
 use std::time::Instant;
 
 /// Algorithm type identifier
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AlgorithmType {
     BubbleSort,
     SelectionSort,
@@ -69,7 +68,7 @@ impl std::fmt::Display for AlgorithmType {
 }
 
 /// Result of a single sorting race
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct RaceResult {
     /// Array size used for this race
     pub array_size: u32,
@@ -318,8 +317,8 @@ impl SessionStatistics {
         use std::collections::HashMap;
 
         let mut win_counts: HashMap<AlgorithmType, u32> = HashMap::new();
-        let mut total_comparisons = 0u64;
-        let mut total_moves = 0u64;
+        let total_comparisons = 0u64;
+        let total_moves = 0u64;
         let mut total_array_size = 0u64;
 
         for result in &session.run_history {
@@ -421,14 +420,16 @@ mod tests {
     #[test]
     fn test_session_statistics() {
         let mut session = SessionState::new();
-        
+
         // Run a couple of races
         session.start_new_race().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(1)); // Ensure time passes
         session.complete_current_race();
-        
+
         session.start_new_race().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(1)); // Ensure time passes
         session.complete_current_race();
-        
+
         let stats = session.get_race_statistics();
         assert_eq!(stats.total_races, 2);
         assert!(stats.session_duration.as_millis() > 0);

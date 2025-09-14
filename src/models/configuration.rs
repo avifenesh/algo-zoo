@@ -2,10 +2,9 @@
 
 use crate::models::config::{Distribution, FairnessMode};
 use anyhow::{Result, anyhow};
-use serde::{Deserialize, Serialize};
 
 /// Represents current user selections for interactive configuration
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct ConfigurationState {
     /// Number of elements to sort (10-1000)
     pub array_size: u32,
@@ -24,7 +23,7 @@ pub struct ConfigurationState {
 }
 
 /// Distribution types for interactive configuration
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DistributionType {
     Shuffled,
     Reversed,
@@ -49,6 +48,19 @@ impl ConfigurationState {
     /// Create a default valid configuration for testing
     pub fn default_valid() -> Self {
         Self::new()
+    }
+
+    /// Create ConfigurationState from RunConfiguration for backwards compatibility
+    pub fn from_run_config(config: &crate::models::config::RunConfiguration) -> Self {
+        Self {
+            array_size: config.array_size as u32,
+            distribution: config.distribution.clone().into(),
+            fairness_mode: config.fairness_mode.clone(),
+            budget: None,
+            alpha: None,
+            beta: None,
+            learning_rate: None,
+        }
     }
 
     /// Get available array sizes for interactive selection
@@ -150,8 +162,8 @@ impl ConfigurationState {
 
     /// Set fairness mode and clear incompatible parameters
     pub fn set_fairness_mode(&mut self, mode: FairnessMode) {
-        self.fairness_mode = mode;
-        
+        self.fairness_mode = mode.clone();
+
         // Clear parameters that don't apply to the new mode
         match &mode {
             FairnessMode::ComparisonBudget { .. } => {
@@ -219,6 +231,8 @@ impl From<Distribution> for DistributionType {
             Distribution::Reversed => DistributionType::Reversed,
             Distribution::NearlySorted => DistributionType::NearlySorted,
             Distribution::FewUnique => DistributionType::FewUnique,
+            Distribution::Sorted => DistributionType::Shuffled,     // Map to closest equivalent
+            Distribution::WithDuplicates => DistributionType::FewUnique,  // Map to closest equivalent
         }
     }
 }
