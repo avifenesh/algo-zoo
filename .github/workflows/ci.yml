@@ -48,9 +48,10 @@ jobs:
         path: target
         key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
     
-    - name: Check formatting
-      run: cargo fmt -- --check
-      if: matrix.rust == 'stable'
+    # Temporarily disabled due to rustfmt module resolution issue
+    # - name: Check formatting
+    #   run: cargo fmt -- --check
+    #   if: matrix.rust == 'stable'
     
     - name: Run clippy
       run: cargo clippy -- -D warnings

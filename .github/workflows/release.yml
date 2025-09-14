@@ -9,29 +9,11 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  create-release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        draft: false
-        prerelease: false
-
-  build-and-upload:
-    name: Build and Upload
-    needs: create-release
+  build-and-release:
+    name: Build and Create Release
     runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
     strategy:
       matrix:
         include:
@@ -53,7 +35,7 @@ jobs:
             suffix: windows-amd64.exe
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
@@ -84,34 +66,34 @@ jobs:
         cd -
       shell: bash
     
-    - name: Upload Release Asset (tar.gz)
-      if: matrix.os != 'windows-latest'
-      uses: actions/upload-release-asset@v1
+    - name: Create Release and Upload Assets
+      if: matrix.target == 'x86_64-unknown-linux-gnu'  # Only create release once
+      run: |
+        # Create release
+        gh release create ${{ github.ref_name }} \
+          --title "Release ${{ github.ref_name }}" \
+          --notes "Automated release for ${{ github.ref_name }}" \
+          --draft=false \
+          --prerelease=false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: ./sorting-race-${{ matrix.suffix }}.tar.gz
-        asset_name: sorting-race-${{ matrix.suffix }}.tar.gz
-        asset_content_type: application/gzip
     
-    - name: Upload Release Asset (zip)
-      if: matrix.os == 'windows-latest'
-      uses: actions/upload-release-asset@v1
+    - name: Upload Release Asset
+      run: |
+        if [ "${{ matrix.os }}" = "windows-latest" ]; then
+          gh release upload ${{ github.ref_name }} sorting-race-${{ matrix.suffix }}.zip
+        else
+          gh release upload ${{ github.ref_name }} sorting-race-${{ matrix.suffix }}.tar.gz
+        fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: ./sorting-race-${{ matrix.suffix }}.zip
-        asset_name: sorting-race-${{ matrix.suffix }}.zip
-        asset_content_type: application/zip
 
   publish-crate:
     name: Publish to crates.io
-    needs: create-release
     runs-on: ubuntu-latest
+    needs: build-and-release
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Install Rust stable
       uses: dtolnay/rust-toolchain@stable
