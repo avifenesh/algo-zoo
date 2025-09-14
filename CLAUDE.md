@@ -138,6 +138,6 @@ For issues or questions:
 
 ---
 
-Last Updated: 2024
+Last Updated: September 2025
 Project State: Production Ready
-Version: 0.2.0
+Version: 0.1.0
