@@ -182,6 +182,7 @@ fn run_app<B: ratatui::backend::Backend>(
     let mut last_tick = Instant::now();
     let tick_rate = Duration::from_millis(TICK_RATE_MS);
     let mut paused = false;
+    let mut selected_algorithm_index = 0; // Track which algorithm to display
 
     // Initialize visualization state
     let mut memory_graph = MemoryGraph::new();
@@ -194,8 +195,15 @@ fn run_app<B: ratatui::backend::Backend>(
             let telemetry = algo.get_telemetry();
             let name = algo.name();
 
-            // Update memory graph
-            memory_graph.update_algorithm(name, telemetry.memory_current);
+            // Update memory graph with actual memory usage
+            let actual_memory = algo.get_memory_usage();
+            let memory_to_use = if actual_memory > 0 {
+                actual_memory
+            } else {
+                // Fall back to telemetry if get_memory_usage returns 0
+                telemetry.memory_current
+            };
+            memory_graph.update_algorithm(name, memory_to_use);
 
             // Update sparklines
             sparklines.update(
@@ -214,6 +222,7 @@ fn run_app<B: ratatui::backend::Backend>(
                 &algorithms,
                 &config,
                 paused,
+                selected_algorithm_index,
                 &memory_graph,
                 &sparklines,
                 &progress_bars,
@@ -229,6 +238,10 @@ fn run_app<B: ratatui::backend::Backend>(
                 match key.code {
                     KeyCode::Char('q') => return Ok(()),
                     KeyCode::Char(' ') => paused = !paused,
+                    KeyCode::Char('v') => {
+                        // Switch to next algorithm for array visualization
+                        selected_algorithm_index = (selected_algorithm_index + 1) % algorithms.len();
+                    },
                     KeyCode::Char('r') => {
                         // Reset with same seed
                         for algo in &mut algorithms {
@@ -260,6 +273,7 @@ fn ui<B: ratatui::backend::Backend>(
     algorithms: &[Box<dyn Sorter>],
     config: &RunConfiguration,
     paused: bool,
+    selected_algorithm_index: usize,
     memory_graph: &MemoryGraph,
     sparklines: &SparklineCollection,
     progress_bars: &ProgressBars,
@@ -295,7 +309,7 @@ fn ui<B: ratatui::backend::Backend>(
                 Span::styled("RUNNING", Style::default().fg(Color::Green))
             },
         ]),
-        Line::from("Press 'q' to quit, SPACE to pause/resume, 'r' to restart"),
+        Line::from("Press 'q' to quit, SPACE to pause/resume, 'v' to switch array view, 'r' to restart"),
     ])
     .block(Block::default().borders(Borders::ALL));
     f.render_widget(header, main_chunks[0]);
@@ -319,17 +333,17 @@ fn ui<B: ratatui::backend::Backend>(
         ])
         .split(body_chunks[0]);
 
-    // Render bar chart for the first algorithm with data
-    if let Some(first_algo) = algorithms.first() {
-        let telemetry = first_algo.get_telemetry();
-        let array_data = first_algo.get_array();
+    // Render bar chart for the selected algorithm
+    if let Some(selected_algo) = algorithms.get(selected_algorithm_index) {
+        let telemetry = selected_algo.get_telemetry();
+        let array_data = selected_algo.get_array();
 
         let bar_chart = BarChart::from_array_with_colors(array_data, &telemetry.highlights)
             .scale_for_terminal(vis_chunks[0].width, vis_chunks[0].height)
             .block(
                 Block::default()
                     .borders(Borders::ALL)
-                    .title(format!("Array View: {}", first_algo.name())),
+                    .title(format!("Array View: {} (Press 'v' to switch)", selected_algo.name())),
             );
 
         f.render_widget(bar_chart, vis_chunks[0]);
@@ -384,12 +398,22 @@ fn ui<B: ratatui::backend::Backend>(
                         telemetry.progress_hint * 100.0
                     )),
                 ]),
-                Line::from(format!(
-                    "    C:{:5} M:{:5} Mem:{:.1}KB",
-                    telemetry.total_comparisons,
-                    telemetry.total_moves,
-                    telemetry.memory_current as f64 / 1024.0
-                )),
+                Line::from({
+                    let actual_memory = algo.get_memory_usage();
+                    let memory_display = if actual_memory > 0 {
+                        format!("{:.1}KB", actual_memory as f64 / 1024.0)
+                    } else if telemetry.memory_current > 0 {
+                        format!("{:.1}KB", telemetry.memory_current as f64 / 1024.0)
+                    } else {
+                        "N/A".to_string()
+                    };
+                    format!(
+                        "    C:{:5} M:{:5} Mem:{}",
+                        telemetry.total_comparisons,
+                        telemetry.total_moves,
+                        memory_display
+                    )
+                }),
             ];
             ListItem::new(content)
         })

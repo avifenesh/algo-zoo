@@ -136,12 +136,25 @@ impl RaceVisualizer {
 
         for algorithm in algorithms {
             let telemetry = algorithm.get_telemetry();
+            // Get actual memory usage from the algorithm
+            let actual_memory = algorithm.get_memory_usage();
+            let memory_display = if actual_memory > 0 {
+                Self::format_memory_bytes(actual_memory)
+            } else {
+                // Fall back to telemetry if get_memory_usage returns 0
+                if telemetry.memory_current > 0 {
+                    Self::format_memory_bytes(telemetry.memory_current)
+                } else {
+                    "N/A".to_string()
+                }
+            };
+            
             output.push_str(&format!(
-                "│ {:<18} │ {:>8} │ {:>8} │ {:>6}B │\n",
+                "│ {:<18} │ {:>8} │ {:>8} │ {:>8} │\n",
                 algorithm.name(),
                 telemetry.total_comparisons,
                 telemetry.total_moves,
-                telemetry.memory_current
+                memory_display
             ));
         }
 
@@ -170,6 +183,24 @@ impl RaceVisualizer {
         }
 
         output
+    }
+
+    /// Format bytes into human readable string
+    fn format_memory_bytes(bytes: usize) -> String {
+        const UNITS: &[&str] = &["B", "KB", "MB", "GB"];
+        let mut size = bytes as f64;
+        let mut unit_index = 0;
+
+        while size >= 1024.0 && unit_index < UNITS.len() - 1 {
+            size /= 1024.0;
+            unit_index += 1;
+        }
+
+        if unit_index == 0 {
+            format!("{}B", bytes)
+        } else {
+            format!("{:.1}{}", size, UNITS[unit_index])
+        }
     }
 
     /// Create a simple text-based visualization frame
