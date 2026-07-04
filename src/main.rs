@@ -25,8 +25,8 @@ use ratatui::{
 };
 use sorting_race::{
     lib::{
-        bar_chart::BarChart, interactive::InteractiveConfigMenu, memory_graph::MemoryGraph, progress::ProgressBars,
-        sparkline::SparklineCollection,
+        bar_chart::BarChart, interactive::InteractiveConfigMenu, memory_graph::MemoryGraph,
+        progress::ProgressBars, sparkline::SparklineCollection,
     },
     models::{
         config::{Distribution, FairnessMode, RunConfiguration},
@@ -262,74 +262,83 @@ where
             .unwrap_or_else(|| Duration::from_secs(0));
 
         if crossterm::event::poll(timeout)?
-            && let Event::Key(key) = event::read()? {
-                // Always handle interactive menu events
-                let menu_handled = interactive_menu.handle_key_event(key)?;
+            && let Event::Key(key) = event::read()?
+        {
+            // Always handle interactive menu events
+            let menu_handled = interactive_menu.handle_key_event(key)?;
 
-                // Check if we just transitioned to racing mode
-                if interactive_menu.should_start_new_race()
-                    && let Some(new_run_config) = interactive_menu.get_run_config() {
-                            current_config = new_run_config;
+            // Check if we just transitioned to racing mode
+            if interactive_menu.should_start_new_race()
+                && let Some(new_run_config) = interactive_menu.get_run_config()
+            {
+                current_config = new_run_config;
 
-                            // Regenerate array with new configuration
-                            let generator = ArrayGenerator::new(current_config.seed);
-                            array = generator.generate(current_config.array_size, &current_config.distribution);
+                // Regenerate array with new configuration
+                let generator = ArrayGenerator::new(current_config.seed);
+                array = generator.generate(current_config.array_size, &current_config.distribution);
 
-                            // Reset all algorithms with new array
-                            for algo in &mut algorithms {
-                                algo.reset(array.clone());
-                            }
-
-                            // Create new fairness model
-                            fairness = create_fairness_model(&current_config.fairness_mode);
-
-                            // Reset visualization state
-                            memory_graph.reset_all();  // Reset memory data but keep algorithm names
-                            sparklines = SparklineCollection::new(50, 1);
-                            progress_bars = ProgressBars::new();
-
-                            // Start new race
-                            let _ = session_state.start_new_race();
-
-                            // Unpause to start the race
-                            paused = false;
-                    }
-
-                    // Handle additional key events not handled by menu
-                    if !menu_handled {
-                        match key.code {
-                            KeyCode::Char('q') => return Ok(()),
-                            KeyCode::Char('r') => {
-                            // Reset with same seed
-                            for algo in &mut algorithms {
-                                algo.reset(array.clone());
-                            }
-                            // Reset memory tracking
-                            memory_graph.reset_all();
-                        },
-                        KeyCode::Char('k') | KeyCode::Char('b') | KeyCode::Char('f') => {
-                            // Enter configuration mode
-                            interactive_menu.interactive_mode.current_mode = ApplicationMode::Configuration;
-                            paused = true; // Pause the race
-
-                            // Set specific focus based on key
-                            use sorting_race::models::interactive_mode::ConfigurationField;
-                            match key.code {
-                                KeyCode::Char('k') => {
-                                    interactive_menu.interactive_mode.set_config_focus(ConfigurationField::ArraySize)?;
-                                },
-                                KeyCode::Char('b') => {
-                                    interactive_menu.interactive_mode.set_config_focus(ConfigurationField::Distribution)?;
-                                },
-                                KeyCode::Char('f') => {
-                                    interactive_menu.interactive_mode.set_config_focus(ConfigurationField::FairnessMode)?;
-                                },
-                                _ => {}
-                            }
-                        },
-                        _ => {},
-                    }
+                // Reset all algorithms with new array
+                for algo in &mut algorithms {
+                    algo.reset(array.clone());
                 }
+
+                // Create new fairness model
+                fairness = create_fairness_model(&current_config.fairness_mode);
+
+                // Reset visualization state
+                memory_graph.reset_all(); // Reset memory data but keep algorithm names
+                sparklines = SparklineCollection::new(50, 1);
+                progress_bars = ProgressBars::new();
+
+                // Start new race
+                let _ = session_state.start_new_race();
+
+                // Unpause to start the race
+                paused = false;
+            }
+
+            // Handle additional key events not handled by menu
+            if !menu_handled {
+                match key.code {
+                    KeyCode::Char('q') => return Ok(()),
+                    KeyCode::Char('r') => {
+                        // Reset with same seed
+                        for algo in &mut algorithms {
+                            algo.reset(array.clone());
+                        }
+                        // Reset memory tracking
+                        memory_graph.reset_all();
+                    },
+                    KeyCode::Char('k') | KeyCode::Char('b') | KeyCode::Char('f') => {
+                        // Enter configuration mode
+                        interactive_menu.interactive_mode.current_mode =
+                            ApplicationMode::Configuration;
+                        paused = true; // Pause the race
+
+                        // Set specific focus based on key
+                        use sorting_race::models::interactive_mode::ConfigurationField;
+                        match key.code {
+                            KeyCode::Char('k') => {
+                                interactive_menu
+                                    .interactive_mode
+                                    .set_config_focus(ConfigurationField::ArraySize)?;
+                            },
+                            KeyCode::Char('b') => {
+                                interactive_menu
+                                    .interactive_mode
+                                    .set_config_focus(ConfigurationField::Distribution)?;
+                            },
+                            KeyCode::Char('f') => {
+                                interactive_menu
+                                    .interactive_mode
+                                    .set_config_focus(ConfigurationField::FairnessMode)?;
+                            },
+                            _ => {},
+                        }
+                    },
+                    _ => {},
+                }
+            }
         }
 
         if last_tick.elapsed() >= tick_rate {
@@ -389,7 +398,9 @@ fn ui(
                 Span::styled("RUNNING", Style::default().fg(Color::Green))
             },
         ]),
-        Line::from("Press 'q' to quit, SPACE to pause/resume, 'v' to switch array view, 'r' to restart"),
+        Line::from(
+            "Press 'q' to quit, SPACE to pause/resume, 'v' to switch array view, 'r' to restart",
+        ),
         Line::from("Interactive: 'k' for array size, 'b' for distribution, 'f' for fairness mode"),
     ])
     .block(Block::default().borders(Borders::ALL));
@@ -399,9 +410,9 @@ fn ui(
     let body_chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
-            Constraint::Length(10),     // Array view (full width)
-            Constraint::Length(8),      // Progress bars (full width)
-            Constraint::Min(0),         // Bottom panels (stats, metrics, memory)
+            Constraint::Length(10), // Array view (full width)
+            Constraint::Length(8),  // Progress bars (full width)
+            Constraint::Min(0),     // Bottom panels (stats, metrics, memory)
         ])
         .split(main_chunks[1]);
 
@@ -415,23 +426,22 @@ fn ui(
             array_data,
             &telemetry.highlights,
             body_chunks[0].width,
-            telemetry.highlights.first().copied()  // Center on first highlight
+            telemetry.highlights.first().copied(), // Center on first highlight
         );
 
         let title = if viewport_indicator.is_empty() {
             format!("Array View: {} (Press 'v' to switch)", selected_algo.name())
         } else {
-            format!("Array View: {} {} (Press 'v' to switch)",
-                    selected_algo.name(), viewport_indicator)
+            format!(
+                "Array View: {} {} (Press 'v' to switch)",
+                selected_algo.name(),
+                viewport_indicator
+            )
         };
 
         let bar_chart = bar_chart
             .scale_for_terminal(body_chunks[0].width, body_chunks[0].height)
-            .block(
-                Block::default()
-                    .borders(Borders::ALL)
-                    .title(title),
-            );
+            .block(Block::default().borders(Borders::ALL).title(title));
 
         f.render_widget(bar_chart, body_chunks[0]);
     } else {
@@ -491,9 +501,7 @@ fn ui(
                     };
                     format!(
                         "    C:{:5} M:{:5} Mem:{}",
-                        telemetry.total_comparisons,
-                        telemetry.total_moves,
-                        memory_display
+                        telemetry.total_comparisons, telemetry.total_moves, memory_display
                     )
                 }),
             ];

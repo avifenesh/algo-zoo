@@ -130,12 +130,11 @@ impl ConfigurationState {
                     return Err(anyhow!("Learning rate must be between 0.1 and 1.0, got {}", learning_rate));
                 }
             },
-            FairnessMode::WallTime { slice_ms } => {
-                if *slice_ms == 0 {
-                    return Err(anyhow!("Wall time slice must be greater than 0, got {}", slice_ms));
-                }
-            },
-            _ => {}, // Other fairness modes don't require validation
+            FairnessMode::WallTime { slice_ms } if *slice_ms == 0 => {
+                return Err(anyhow!("Wall time slice must be greater than 0, got {}", slice_ms));
+            }
+            FairnessMode::WallTime { .. } => {}
+            _ => {} // Other fairness modes don't require validation
         }
 
         Ok(())

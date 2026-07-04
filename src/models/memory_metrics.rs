@@ -331,8 +331,8 @@ impl MemoryStatistics {
         let total_peak = collection.get_total_peak_usage();
         let global_peak = collection.get_global_peak();
 
-        let average_current = if algorithm_count > 0 { total_current / algorithm_count } else { 0 };
-        let average_peak = if algorithm_count > 0 { total_peak / algorithm_count } else { 0 };
+        let average_current = total_current.checked_div(algorithm_count).unwrap_or(0);
+        let average_peak = total_peak.checked_div(algorithm_count).unwrap_or(0);
 
         // Find most and least efficient algorithms
         let mut most_efficient = None;

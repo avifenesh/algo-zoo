@@ -98,10 +98,7 @@ impl HighlightSystem {
         for &index in indices {
             let highlight =
                 Highlight::new(HighlightColor::Blue, HighlightPriority::Medium, "compare");
-            self.highlights
-                .entry(index)
-                .or_default()
-                .push(highlight);
+            self.highlights.entry(index).or_default().push(highlight);
         }
     }
 
@@ -109,10 +106,7 @@ impl HighlightSystem {
     pub fn highlight_swap(&mut self, indices: &[usize]) {
         for &index in indices {
             let highlight = Highlight::new(HighlightColor::Red, HighlightPriority::High, "swap");
-            self.highlights
-                .entry(index)
-                .or_default()
-                .push(highlight);
+            self.highlights.entry(index).or_default().push(highlight);
         }
     }
 
@@ -126,10 +120,7 @@ impl HighlightSystem {
 
         for &index in indices {
             let highlight = Highlight::new(color, priority, operation_type);
-            self.highlights
-                .entry(index)
-                .or_default()
-                .push(highlight);
+            self.highlights.entry(index).or_default().push(highlight);
         }
     }
 

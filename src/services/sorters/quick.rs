@@ -366,15 +366,11 @@ impl QuickSort {
 
         // Add fine-grained progress from current partition
         let partition_progress = match &self.partition_state {
-            PartitionState::InProgress { current_j, low, high, .. } => {
-                if *high > *low {
-                    let current_partition_size = high - low;
-                    let partition_weight = current_partition_size as f32 / n;
-                    let local_progress = (*current_j - *low) as f32 / (*high - *low) as f32;
-                    partition_weight * local_progress * 0.05 // Small contribution for smoothness
-                } else {
-                    0.0
-                }
+            PartitionState::InProgress { current_j, low, high, .. } if high > low => {
+                let current_partition_size = high - low;
+                let partition_weight = current_partition_size as f32 / n;
+                let local_progress = (*current_j - *low) as f32 / (*high - *low) as f32;
+                partition_weight * local_progress * 0.05
             }
             _ => 0.0,
         };

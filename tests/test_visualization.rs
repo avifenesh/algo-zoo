@@ -61,7 +61,7 @@ impl Sorter for MockSorter {
             total_moves: self.moves,
             memory_current: 1024,
             memory_peak: 2048,
-            highlights: if self.step_count % 2 == 0 {
+            highlights: if self.step_count.is_multiple_of(2) {
                 vec![0, 1]
             } else {
                 vec![2, 3]
