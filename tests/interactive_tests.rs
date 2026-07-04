@@ -6,7 +6,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     #[should_panic(expected = "InteractiveMode not yet implemented")]
     fn test_array_size_configuration_contract() {
@@ -17,12 +17,14 @@ mod tests {
             kind: crossterm::event::KeyEventKind::Press,
             state: crossterm::event::KeyEventState::NONE,
         };
-        
+
         // This should panic until InteractiveMode is implemented
-        panic!("InteractiveMode not yet implemented - this test should fail until T024 is complete");
+        panic!(
+            "InteractiveMode not yet implemented - this test should fail until T024 is complete"
+        );
     }
-    
-    #[test] 
+
+    #[test]
     #[should_panic(expected = "InteractiveMode not yet implemented")]
     fn test_distribution_configuration_contract() {
         // Contract test for distribution configuration key 'b'
@@ -32,11 +34,13 @@ mod tests {
             kind: crossterm::event::KeyEventKind::Press,
             state: crossterm::event::KeyEventState::NONE,
         };
-        
+
         // This should panic until InteractiveMode is implemented
-        panic!("InteractiveMode not yet implemented - this test should fail until T024 is complete");
+        panic!(
+            "InteractiveMode not yet implemented - this test should fail until T024 is complete"
+        );
     }
-    
+
     #[test]
     #[should_panic(expected = "InteractiveMode not yet implemented")]
     fn test_fairness_configuration_contract() {
@@ -47,11 +51,13 @@ mod tests {
             kind: crossterm::event::KeyEventKind::Press,
             state: crossterm::event::KeyEventState::NONE,
         };
-        
+
         // This should panic until InteractiveMode is implemented
-        panic!("InteractiveMode not yet implemented - this test should fail until T024 is complete");
+        panic!(
+            "InteractiveMode not yet implemented - this test should fail until T024 is complete"
+        );
     }
-    
+
     #[test]
     #[should_panic(expected = "DisplayMode not yet implemented")]
     fn test_visualization_switch_contract() {
@@ -62,17 +68,19 @@ mod tests {
             kind: crossterm::event::KeyEventKind::Press,
             state: crossterm::event::KeyEventState::NONE,
         };
-        
+
         // This should panic until DisplayMode is implemented
         panic!("DisplayMode not yet implemented - this test should fail until T026 is complete");
     }
-    
+
     #[test]
     #[should_panic(expected = "get_memory_display_values() function not yet implemented")]
     fn test_memory_display_contract() {
         // Contract test for memory value retrieval
-        
+
         // This should panic until memory display functions are implemented
-        panic!("get_memory_display_values() function not yet implemented - this test should fail until T019-T020 are complete");
+        panic!(
+            "get_memory_display_values() function not yet implemented - this test should fail until T019-T020 are complete"
+        );
     }
 }

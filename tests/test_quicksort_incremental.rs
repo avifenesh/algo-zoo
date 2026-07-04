@@ -186,8 +186,7 @@ fn test_incremental_partitioning_pivot_strategies() {
         .collect::<Vec<_>>();
 
     // Should have multiple different pivots during execution
-    let unique_pivots: std::collections::HashSet<_> =
-        pivot_changes.into_iter().flatten().collect();
+    let unique_pivots: std::collections::HashSet<_> = pivot_changes.into_iter().flatten().collect();
 
     assert!(
         unique_pivots.len() > 1,
