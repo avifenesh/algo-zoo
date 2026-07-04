@@ -162,7 +162,10 @@ fn create_fairness_model(fairness_mode: &FairnessMode) -> Box<dyn FairnessModel>
 fn run_app<B: ratatui::backend::Backend>(
     terminal: &mut Terminal<B>,
     config: RunConfiguration,
-) -> Result<()> {
+) -> Result<()>
+where
+    <B as ratatui::backend::Backend>::Error: Send + Sync + 'static,
+{
     // Initialize interactive configuration menu
     let config_state = ConfigurationState::from_run_config(&config);
     let mut interactive_menu = InteractiveConfigMenu::new();
