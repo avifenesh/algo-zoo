@@ -149,7 +149,8 @@ impl FairnessModel for AdaptiveFairness {
             }
         } else {
             // Give more budget to algorithms with slower progress (need more help)
-            let total_inverse: f32 = active_algos.iter()
+            let total_inverse: f32 = active_algos
+                .iter()
                 .map(|(_, rate)| max_rate - rate + 0.01) // Add small epsilon to avoid zero
                 .sum();
 

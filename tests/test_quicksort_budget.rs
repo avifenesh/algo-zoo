@@ -319,7 +319,8 @@ fn test_resource_usage_telemetry_k16() {
     );
 
     // Progress should generally increase (allowing for small fluctuations)
-    let progress_decreased_count = progress_values.windows(2)
+    let progress_decreased_count = progress_values
+        .windows(2)
         .filter(|pair| pair[1] < pair[0] - 0.01) // Allow small numerical errors
         .count();
 

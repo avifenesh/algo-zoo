@@ -227,7 +227,7 @@ impl BarChart {
         } else {
             // Need viewport
             let center = viewport_center
-                .or_else(|| highlights.first().copied())  // Center on first highlight
+                .or_else(|| highlights.first().copied()) // Center on first highlight
                 .unwrap_or(array_len / 2); // Or center of array
 
             let half_view = max_elements / 2;
