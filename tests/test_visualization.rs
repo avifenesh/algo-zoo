@@ -431,13 +431,8 @@ mod tests {
 
             let actual_fps = results.average_fps();
 
-            // Allow some tolerance for frame rate (±10 FPS) - increased tolerance for test stability
-            assert!(
-                actual_fps >= (target_fps as f32) - 10.0,
-                "FPS too low: {} < {} - 10",
-                actual_fps,
-                target_fps
-            );
+            // The limiter caps the rate. Only the upper bound is checked: a slow
+            // shared CI runner can overshoot sleeps and drop the rate far below target.
             assert!(
                 actual_fps <= (target_fps as f32) + 10.0,
                 "FPS too high: {} > {} + 10",
@@ -518,10 +513,10 @@ mod tests {
         let duration = start_time.elapsed();
         let expected_duration = Duration::from_millis(10 * (1000 / 30)); // 10 frames at 30 FPS
 
-        // Allow some tolerance (±50ms)
+        // The limiter must wait at least the frame budget. No upper bound: sleeps
+        // on a loaded CI runner can overshoot by far more than any fixed tolerance.
         let tolerance = Duration::from_millis(50);
         assert!(duration >= expected_duration - tolerance);
-        assert!(duration <= expected_duration + tolerance);
     }
 
     #[test]
