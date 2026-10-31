@@ -78,17 +78,23 @@ sorting-race --fair weighted --alpha 2 --beta 0.5
 
 ## 🎮 Controls
 
+The app opens in a configuration menu prefilled from the command line. Press `Space` to start the race.
+
 | Key | Action |
 |-----|--------|
-| `Space` | Pause/Resume the race |
-| `R` | Reset with new random data |
+| `Space` | Start, pause or resume the race |
+| `K` / `B` / `F` | Configure array size, distribution or fairness mode |
+| `↑` `↓` `←` `→`, `Enter`, `Esc` | Move, confirm or cancel in the configuration menu |
+| `V` | Switch which algorithm the array view shows |
+| `?` | Toggle help |
+| `R` | Restart the race on the same data |
 | `Q` | Quit application |
 
 ## 🎯 Command Line Options
 
 ### Array Configuration
 - `-s, --size <N>` - Number of elements to sort (default: 50)
-- `-S, --seed <SEED>` - Random seed for reproducible runs
+- `-S, --seed <SEED>` - Random seed for reproducible runs (default: 12345)
 - `-d, --distribution <TYPE>` - Data distribution pattern
 
 ### Distribution Types
@@ -167,7 +173,7 @@ Observe how Quick Sort struggles with reversed data.
 ```bash
 sorting-race --size 50 --distribution few-unique
 ```
-Test which algorithms maintain the relative order of equal elements.
+See how each algorithm handles many duplicate values.
 
 ## 🖥️ System Requirements
 
