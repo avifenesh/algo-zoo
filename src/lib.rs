@@ -6,41 +6,8 @@
 #![allow(clippy::manual_clamp)]
 #![allow(clippy::if_same_then_else)]
 
-pub mod models {
-    pub mod traits;
-    pub mod algorithm;
-    pub mod metrics;
-    pub mod config;
-    pub mod markers;
-    pub mod configuration;
-    pub mod interactive_mode;
-    pub mod session;
-    pub mod display_mode;
-    pub mod memory_metrics;
-}
-
-pub mod services {
-    pub mod sorters {
-        pub mod bubble;
-        pub mod insertion;
-        pub mod selection;
-        pub mod quick;
-        pub mod heap;
-        pub mod merge;
-        pub mod shell;
-    }
-    
-    pub mod fairness {
-        pub mod comparison;
-        pub mod weighted;
-        pub mod walltime;
-        pub mod adaptive;
-    }
-    
-    pub mod generator;
-    pub mod snapshot;
-    pub mod memory;
-}
+pub mod models;
+pub mod services;
 
 pub mod lib {
     pub mod bar_chart;
