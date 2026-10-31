@@ -268,9 +268,7 @@ where
             let menu_handled = interactive_menu.handle_key_event(key)?;
 
             // Check if we just transitioned to racing mode
-            if interactive_menu.should_start_new_race()
-                && let Some(new_run_config) = interactive_menu.get_run_config()
-            {
+            if let Some(new_run_config) = interactive_menu.take_new_race_config() {
                 current_config = new_run_config;
 
                 // Regenerate array with new configuration

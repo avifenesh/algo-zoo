@@ -37,6 +37,8 @@ pub struct InteractiveConfigMenu {
     fairness_mode_index: usize,
     /// Current parameter value being edited (for numeric inputs)
     current_parameter_value: Option<String>,
+    /// Set when Space leaves Configuration for Racing; cleared once the race starts
+    race_start_pending: bool,
 }
 
 impl InteractiveConfigMenu {
@@ -49,6 +51,7 @@ impl InteractiveConfigMenu {
             distribution_index: 0, // Default to Shuffled
             fairness_mode_index: 2, // Default to WallTime
             current_parameter_value: None,
+            race_start_pending: false,
         }
     }
 
@@ -69,7 +72,7 @@ impl InteractiveConfigMenu {
             Some(crate::models::config::RunConfiguration {
                 array_size: self.config_state.array_size as usize,
                 distribution: self.config_state.to_legacy_distribution(),
-                seed: 12345, // Default seed
+                seed: self.config_state.seed,
                 fairness_mode: self.config_state.fairness_mode.clone(),
                 target_fps: 30,
             })
@@ -78,11 +81,22 @@ impl InteractiveConfigMenu {
         }
     }
 
-    /// Check if configuration has changed and is ready for racing
+    /// Check if the user just started a race from the configuration menu.
+    /// Resuming from pause or pressing other keys mid-race does not count.
     pub fn should_start_new_race(&self) -> bool {
+        self.race_start_pending &&
         self.config_state.is_valid() &&
         self.interactive_mode.current_mode == ApplicationMode::Racing &&
         self.interactive_mode.config_focus.is_none()
+    }
+
+    /// Return the run configuration for a newly started race, once per start
+    pub fn take_new_race_config(&mut self) -> Option<crate::models::config::RunConfiguration> {
+        if !self.should_start_new_race() {
+            return None;
+        }
+        self.race_start_pending = false;
+        self.get_run_config()
     }
 
     /// Check if currently in racing mode
@@ -160,6 +174,8 @@ impl InteractiveConfigMenu {
                 match self.interactive_mode.current_mode {
                     ApplicationMode::Configuration => {
                         self.interactive_mode.transition_to_racing()?;
+                        self.race_start_pending =
+                            self.interactive_mode.current_mode == ApplicationMode::Racing;
                         Ok(true)
                     }
                     ApplicationMode::Racing => {
@@ -986,5 +1002,47 @@ mod tests {
         let handled = menu.handle_key_event(space_key).unwrap();
         assert!(handled);
         assert_eq!(menu.interactive_mode.current_mode, ApplicationMode::Paused);
+    }
+
+    #[test]
+    fn test_new_race_starts_only_from_configuration() {
+        let mut menu = InteractiveConfigMenu::new();
+        let key = |c| KeyEvent {
+            code: KeyCode::Char(c),
+            modifiers: KeyModifiers::NONE,
+            kind: KeyEventKind::Press,
+            state: crossterm::event::KeyEventState::empty(),
+        };
+
+        // Configuration -> Racing starts a race once
+        menu.handle_key_event(key(' ')).unwrap();
+        assert!(menu.take_new_race_config().is_some());
+        assert!(menu.take_new_race_config().is_none());
+
+        // View switch and help mid-race do not restart it
+        menu.handle_key_event(key('v')).unwrap();
+        assert!(menu.take_new_race_config().is_none());
+        menu.handle_key_event(key('?')).unwrap();
+        menu.handle_key_event(key('?')).unwrap();
+        assert!(menu.take_new_race_config().is_none());
+
+        // Pause then resume does not restart it
+        menu.handle_key_event(key(' ')).unwrap();
+        menu.handle_key_event(key(' ')).unwrap();
+        assert_eq!(menu.interactive_mode.current_mode, ApplicationMode::Racing);
+        assert!(menu.take_new_race_config().is_none());
+    }
+
+    #[test]
+    fn test_run_config_uses_cli_seed() {
+        let run_config = crate::models::config::RunConfiguration {
+            array_size: 100,
+            seed: 777,
+            ..Default::default()
+        };
+        let mut menu = InteractiveConfigMenu::new();
+        menu.config_state = ConfigurationState::from_run_config(&run_config);
+        menu.interactive_mode.transition_to_racing().unwrap();
+        assert_eq!(menu.get_run_config().unwrap().seed, 777);
     }
 }

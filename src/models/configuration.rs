@@ -20,6 +20,8 @@ pub struct ConfigurationState {
     pub beta: Option<f32>,
     /// Learning rate for adaptive fairness
     pub learning_rate: Option<f32>,
+    /// Random seed for array generation
+    pub seed: u64,
 }
 
 /// Distribution types for interactive configuration
@@ -42,6 +44,7 @@ impl ConfigurationState {
             alpha: None,
             beta: None,
             learning_rate: None,
+            seed: 12345,
         }
     }
 
@@ -60,6 +63,7 @@ impl ConfigurationState {
             alpha: None,
             beta: None,
             learning_rate: None,
+            seed: config.seed,
         }
     }
 
