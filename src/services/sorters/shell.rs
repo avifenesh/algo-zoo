@@ -1,6 +1,6 @@
 //! Shell Sort implementation
 
-use crate::models::traits::{Sorter, StepResult, Telemetry, Markers};
+use crate::models::traits::{Markers, Sorter, StepResult, Telemetry};
 use std::any::Any;
 
 /// Shell Sort algorithm implementation
@@ -92,7 +92,8 @@ impl Sorter for ShellSort {
 
                     if self.data[self.insertion_pos] < self.data[self.insertion_pos - self.gap] {
                         // Swap elements
-                        self.data.swap(self.insertion_pos, self.insertion_pos - self.gap);
+                        self.data
+                            .swap(self.insertion_pos, self.insertion_pos - self.gap);
                         self.moves += 1;
                         self.insertion_pos -= self.gap;
                     } else {
@@ -121,10 +122,10 @@ impl Sorter for ShellSort {
 
     fn get_telemetry(&self) -> Telemetry {
         let mut markers = Markers::default();
-        
+
         if !self.complete {
             markers.gap = Some(self.gap);
-            
+
             if self.in_insertion {
                 markers.cursors.push(self.insertion_pos);
                 if self.insertion_pos >= self.gap {
@@ -145,7 +146,10 @@ impl Sorter for ShellSort {
             status_text: if self.complete {
                 "Completed".to_string()
             } else if self.in_insertion {
-                format!("Gap {}, inserting at position {}", self.gap, self.insertion_pos)
+                format!(
+                    "Gap {}, inserting at position {}",
+                    self.gap, self.insertion_pos
+                )
             } else {
                 format!("Gap {}, processing position {}", self.gap, self.current_pos)
             },
@@ -159,7 +163,11 @@ impl Sorter for ShellSort {
                     1.0
                 } else {
                     let progress = 1.0 - (current_gap / initial_gap);
-                    if progress.is_finite() { progress.min(1.0).max(0.0) } else { 0.0 }
+                    if progress.is_finite() {
+                        progress.min(1.0).max(0.0)
+                    } else {
+                        0.0
+                    }
                 }
             },
         }

@@ -1,17 +1,17 @@
 //! Sorting algorithm implementations
 
 pub mod bubble;
-pub mod insertion;
-pub mod selection;
-pub mod quick;
 pub mod heap;
+pub mod insertion;
 pub mod merge;
+pub mod quick;
+pub mod selection;
 pub mod shell;
 
 pub use bubble::BubbleSort;
-pub use insertion::InsertionSort;
-pub use selection::SelectionSort;
-pub use quick::QuickSort;
 pub use heap::HeapSort;
+pub use insertion::InsertionSort;
 pub use merge::MergeSort;
+pub use quick::QuickSort;
+pub use selection::SelectionSort;
 pub use shell::ShellSort;

@@ -1,8 +1,8 @@
 //! Deterministic array generation for sorting race
 
 use crate::models::config::Distribution;
-use rand::{Rng, SeedableRng};
 use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
 
 /// Deterministic array generator using seeded RNG
 #[derive(Debug)]
@@ -36,13 +36,13 @@ impl ArrayGenerator {
     fn generate_shuffled(&self, size: usize) -> Vec<i32> {
         let mut rng = StdRng::seed_from_u64(self.seed);
         let mut array: Vec<i32> = (1..=size as i32).collect();
-        
+
         // Fisher-Yates shuffle
         for i in (1..size).rev() {
             let j = rng.random_range(0..=i);
             array.swap(i, j);
         }
-        
+
         array
     }
 
@@ -50,7 +50,7 @@ impl ArrayGenerator {
     fn generate_nearly_sorted(&self, size: usize) -> Vec<i32> {
         let mut rng = StdRng::seed_from_u64(self.seed);
         let mut array: Vec<i32> = (1..=size as i32).collect();
-        
+
         // Randomly swap ~10% of elements
         let swaps = (size / 10).max(1);
         for _ in 0..swaps {
@@ -58,7 +58,7 @@ impl ArrayGenerator {
             let j = rng.random_range(0..size);
             array.swap(i, j);
         }
-        
+
         array
     }
 
@@ -72,13 +72,13 @@ impl ArrayGenerator {
         let mut rng = StdRng::seed_from_u64(self.seed);
         let unique_count = (size / 10).max(3).min(size); // ~10% unique values
         let values: Vec<i32> = (1..=unique_count as i32).collect();
-        
+
         let mut array = Vec::with_capacity(size);
         for _ in 0..size {
             let idx = rng.random_range(0..values.len());
             array.push(values[idx]);
         }
-        
+
         array
     }
 
@@ -91,7 +91,7 @@ impl ArrayGenerator {
     fn generate_with_duplicates(&self, size: usize) -> Vec<i32> {
         let mut rng = StdRng::seed_from_u64(self.seed);
         let mut array = Vec::with_capacity(size);
-        
+
         // Generate with 50% duplicates
         for i in 0..size {
             if i < size / 2 {
@@ -103,13 +103,13 @@ impl ArrayGenerator {
                 array.push((idx + 1) as i32);
             }
         }
-        
+
         // Shuffle the array
         for i in (1..size).rev() {
             let j = rng.random_range(0..=i);
             array.swap(i, j);
         }
-        
+
         array
     }
 
@@ -127,15 +127,15 @@ impl ArrayGenerator {
             Distribution::Sorted => {
                 // Check if array is sorted
                 array.windows(2).all(|w| w[0] <= w[1])
-            }
+            },
             Distribution::Reversed => {
                 // Check if array is reverse sorted
                 array.windows(2).all(|w| w[0] >= w[1])
-            }
+            },
             _ => {
                 // For other distributions, just check that values are reasonable
                 array.iter().all(|&x| x > 0 && x <= size as i32 * 2)
-            }
+            },
         }
     }
 }
@@ -148,10 +148,10 @@ mod tests {
     fn test_deterministic_generation() {
         let gen1 = ArrayGenerator::new(42);
         let gen2 = ArrayGenerator::new(42);
-        
+
         let array1 = gen1.generate(10, &Distribution::Shuffled);
         let array2 = gen2.generate(10, &Distribution::Shuffled);
-        
+
         assert_eq!(array1, array2);
     }
 
@@ -159,10 +159,10 @@ mod tests {
     fn test_different_seeds() {
         let gen1 = ArrayGenerator::new(42);
         let gen2 = ArrayGenerator::new(43);
-        
+
         let array1 = gen1.generate(10, &Distribution::Shuffled);
         let array2 = gen2.generate(10, &Distribution::Shuffled);
-        
+
         assert_ne!(array1, array2);
     }
 
@@ -170,7 +170,7 @@ mod tests {
     fn test_sorted_distribution() {
         let generator = ArrayGenerator::new(42);
         let array = generator.generate(10, &Distribution::Sorted);
-        
+
         assert_eq!(array, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
     }
 
@@ -178,7 +178,7 @@ mod tests {
     fn test_reversed_distribution() {
         let generator = ArrayGenerator::new(42);
         let array = generator.generate(10, &Distribution::Reversed);
-        
+
         assert_eq!(array, vec![10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
     }
 
@@ -186,21 +186,33 @@ mod tests {
     fn test_empty_array() {
         let generator = ArrayGenerator::new(42);
         let array = generator.generate(0, &Distribution::Shuffled);
-        
+
         assert!(array.is_empty());
     }
 
     #[test]
     fn test_array_validation() {
         let generator = ArrayGenerator::new(42);
-        
+
         let sorted = generator.generate(5, &Distribution::Sorted);
-        assert!(ArrayGenerator::validate_array(&sorted, 5, &Distribution::Sorted));
-        
+        assert!(ArrayGenerator::validate_array(
+            &sorted,
+            5,
+            &Distribution::Sorted
+        ));
+
         let reversed = generator.generate(5, &Distribution::Reversed);
-        assert!(ArrayGenerator::validate_array(&reversed, 5, &Distribution::Reversed));
-        
+        assert!(ArrayGenerator::validate_array(
+            &reversed,
+            5,
+            &Distribution::Reversed
+        ));
+
         let shuffled = generator.generate(5, &Distribution::Shuffled);
-        assert!(ArrayGenerator::validate_array(&shuffled, 5, &Distribution::Shuffled));
+        assert!(ArrayGenerator::validate_array(
+            &shuffled,
+            5,
+            &Distribution::Shuffled
+        ));
     }
 }

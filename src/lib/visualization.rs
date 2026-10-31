@@ -42,23 +42,27 @@ impl RaceVisualizer {
     /// Render the current state of all algorithms
     pub fn render(&self, algorithms: &[Box<dyn Sorter>]) -> String {
         let mut output = String::new();
-        
+
         // Header
         output.push_str(&format!("┌{}┐\n", "─".repeat(self.width - 2)));
-        output.push_str(&format!("│{:^width$}│\n", "Sorting Algorithm Race", width = self.width - 2));
+        output.push_str(&format!(
+            "│{:^width$}│\n",
+            "Sorting Algorithm Race",
+            width = self.width - 2
+        ));
         output.push_str(&format!("├{}┤\n", "─".repeat(self.width - 2)));
 
         // Render each algorithm
         for (i, algorithm) in algorithms.iter().enumerate() {
             let telemetry = algorithm.get_telemetry();
-            
+
             // Algorithm name and status
             let status = if algorithm.is_complete() {
                 "COMPLETE"
             } else {
                 "RUNNING"
             };
-            
+
             output.push_str(&format!(
                 "│ {:<20} │ {:>8} │ C:{:>6} M:{:>6} │\n",
                 algorithm.name(),
@@ -66,10 +70,10 @@ impl RaceVisualizer {
                 telemetry.total_comparisons,
                 telemetry.total_moves
             ));
-            
+
             // Array visualization
             output.push_str(&self.render_array(algorithm.get_array(), &telemetry));
-            
+
             if i < algorithms.len() - 1 {
                 output.push_str(&format!("├{}┤\n", "─".repeat(self.width - 2)));
             }
@@ -84,17 +88,18 @@ impl RaceVisualizer {
     /// Render a single array with highlights
     fn render_array(&self, array: &[i32], telemetry: &Telemetry) -> String {
         let mut output = String::new();
-        
+
         // Calculate scaling for visualization
         let max_val = array.iter().max().copied().unwrap_or(1);
         let bar_height = (self.height / 8).max(1); // Reserve space for multiple algorithms
-        
+
         // Render array as bar chart
         for row in (0..bar_height).rev() {
             output.push_str("│ ");
-            
+
             for (i, &value) in array.iter().enumerate() {
-                let normalized_height = (value as f32 / max_val as f32 * bar_height as f32) as usize;
+                let normalized_height =
+                    (value as f32 / max_val as f32 * bar_height as f32) as usize;
                 let char = if normalized_height > row {
                     if telemetry.highlights.contains(&i) && self.show_comparisons {
                         '*' // Highlight character
@@ -106,7 +111,7 @@ impl RaceVisualizer {
                 };
                 output.push(char);
             }
-            
+
             output.push_str(" │\n");
         }
 
@@ -148,7 +153,7 @@ impl RaceVisualizer {
                     "N/A".to_string()
                 }
             };
-            
+
             output.push_str(&format!(
                 "│ {:<18} │ {:>8} │ {:>8} │ {:>8} │\n",
                 algorithm.name(),
@@ -165,15 +170,15 @@ impl RaceVisualizer {
     /// Render progress bars for all algorithms
     pub fn render_progress(&self, algorithms: &[Box<dyn Sorter>]) -> String {
         let mut output = String::new();
-        
+
         for algorithm in algorithms {
             let telemetry = algorithm.get_telemetry();
             let progress = telemetry.progress_hint.clamp(0.0, 1.0);
             let progress_width = 30;
             let filled = (progress * progress_width as f32) as usize;
-            
+
             let bar = "█".repeat(filled) + &"░".repeat(progress_width - filled);
-            
+
             output.push_str(&format!(
                 "{:<15} [{}] {:>5.1}%\n",
                 algorithm.name(),
@@ -208,24 +213,24 @@ impl RaceVisualizer {
         let lines: Vec<&str> = content.lines().collect();
         let content_width = lines.iter().map(|line| line.len()).max().unwrap_or(0);
         let frame_width = content_width.max(title.len()) + 4;
-        
+
         let mut frame = String::new();
-        
+
         // Top border
         frame.push_str(&format!("┌{}┐\n", "─".repeat(frame_width - 2)));
-        
+
         // Title
         frame.push_str(&format!("│{:^width$}│\n", title, width = frame_width - 2));
         frame.push_str(&format!("├{}┤\n", "─".repeat(frame_width - 2)));
-        
+
         // Content
         for line in lines {
             frame.push_str(&format!("│ {:<width$} │\n", line, width = frame_width - 4));
         }
-        
+
         // Bottom border
         frame.push_str(&format!("└{}┘\n", "─".repeat(frame_width - 2)));
-        
+
         frame
     }
 }

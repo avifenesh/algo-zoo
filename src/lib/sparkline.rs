@@ -44,7 +44,7 @@ impl Sparkline {
     /// Add a data point to the sparkline
     pub fn add_data_point(&mut self, value: f64) {
         self.data.push(value);
-        
+
         // Keep only the most recent data points that fit in the width
         if self.data.len() > self.width {
             self.data.remove(0);
@@ -54,7 +54,7 @@ impl Sparkline {
     /// Set all data points at once
     pub fn set_data(&mut self, data: Vec<f64>) {
         self.data = data;
-        
+
         // Trim to fit width
         if self.data.len() > self.width {
             let start = self.data.len() - self.width;
@@ -75,7 +75,7 @@ impl Sparkline {
 
         let min_val = self.data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
         let max_val = self.data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-        
+
         // Avoid division by zero
         let range = if (max_val - min_val).abs() < f64::EPSILON {
             1.0
@@ -88,7 +88,7 @@ impl Sparkline {
         let levels = chars.len() as f64;
 
         let mut result = String::new();
-        
+
         for &value in &self.data {
             let normalized = ((value - min_val) / range).clamp(0.0, 1.0);
             let level = (normalized * (levels - 1.0)).round() as usize;
@@ -108,7 +108,7 @@ impl Sparkline {
         let sparkline = self.render_string();
         let min_val = self.data.iter().fold(f64::INFINITY, |a, &b| a.min(b));
         let max_val = self.data.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-        
+
         format!(
             "{}: {} (min: {:.1}, max: {:.1})",
             title, sparkline, min_val, max_val
@@ -143,7 +143,7 @@ impl Sparkline {
     /// Set width
     pub fn set_width(&mut self, width: usize) {
         self.width = width.max(1);
-        
+
         // Trim data if necessary
         if self.data.len() > self.width {
             let start = self.data.len() - self.width;
@@ -172,16 +172,16 @@ impl Sparkline {
 
         let sparkline_str = self.render_string();
         let chars: Vec<char> = sparkline_str.chars().collect();
-        
+
         let start_x = inner_area.left();
         let y = inner_area.top() + inner_area.height / 2; // Center vertically
-        
+
         for (i, ch) in chars.iter().enumerate() {
             let x = start_x + i as u16;
             if x >= inner_area.right() {
                 break;
             }
-            
+
             if y >= inner_area.top() && y < inner_area.bottom() {
                 buf[(x, y)]
                     .set_symbol(&ch.to_string())
@@ -229,7 +229,9 @@ impl SparklineCollection {
 
     /// Add or update a sparkline with data
     pub fn update(&mut self, key: &str, value: f64) {
-        let sparkline = self.sparklines.entry(key.to_string())
+        let sparkline = self
+            .sparklines
+            .entry(key.to_string())
             .or_insert_with(|| Sparkline::new(self.default_width, self.default_height));
         sparkline.add_data_point(value);
     }
@@ -310,7 +312,7 @@ mod tests {
         sparkline.add_data_point(1.0);
         sparkline.add_data_point(2.0);
         sparkline.add_data_point(3.0);
-        
+
         assert_eq!(sparkline.len(), 3);
         assert_eq!(sparkline.get_data(), &[1.0, 2.0, 3.0]);
     }
@@ -321,7 +323,7 @@ mod tests {
         for i in 1..=5 {
             sparkline.add_data_point(i as f64);
         }
-        
+
         assert_eq!(sparkline.len(), 3);
         assert_eq!(sparkline.get_data(), &[3.0, 4.0, 5.0]);
     }
@@ -330,7 +332,7 @@ mod tests {
     fn test_sparkline_render() {
         let mut sparkline = Sparkline::new(5, 1);
         sparkline.set_data(vec![1.0, 2.0, 3.0]);
-        
+
         let rendered = sparkline.render_string(); // This is the string render method
         assert_eq!(rendered.chars().count(), 5); // Should be padded to width, using char count for Unicode
     }
@@ -340,7 +342,7 @@ mod tests {
         let mut collection = SparklineCollection::new(10, 1);
         collection.update("test1", 5.0);
         collection.update("test2", 10.0);
-        
+
         assert_eq!(collection.len(), 2);
         assert!(collection.get("test1").is_some());
         assert!(collection.get("test2").is_some());

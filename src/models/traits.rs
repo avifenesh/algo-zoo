@@ -53,38 +53,38 @@ pub struct Telemetry {
 /// Core trait that all sorting algorithms must implement
 pub trait Sorter: Debug + Send + Any {
     /// Execute one step of the sorting algorithm
-    /// 
+    ///
     /// # Arguments
     /// * `budget` - Maximum number of comparisons allowed in this step
-    /// 
+    ///
     /// # Returns
     /// * `StepResult` - Information about operations performed
     fn step(&mut self, budget: usize) -> StepResult;
-    
+
     /// Check if the algorithm has completed sorting
     fn is_complete(&self) -> bool;
-    
+
     /// Get current telemetry data
     fn get_telemetry(&self) -> Telemetry;
-    
+
     /// Reset the algorithm with new data
-    /// 
+    ///
     /// # Arguments
     /// * `data` - New array to sort
     fn reset(&mut self, data: Vec<i32>);
-    
+
     /// Get the algorithm's display name
     fn name(&self) -> &str;
-    
+
     /// Get current array state (for visualization)
     fn get_array(&self) -> &[i32];
-    
+
     /// Get auxiliary memory usage in bytes
     fn get_memory_usage(&self) -> usize;
-    
+
     /// Support downcasting for type-specific operations
     fn as_any(&self) -> &dyn Any;
-    
+
     /// Support mutable downcasting for type-specific operations
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
@@ -92,14 +92,14 @@ pub trait Sorter: Debug + Send + Any {
 /// Fairness model trait for allocating step budgets
 pub trait FairnessModel: Debug {
     /// Allocate step budgets to algorithms
-    /// 
+    ///
     /// # Arguments
     /// * `algorithms` - Current state of all algorithms
-    /// 
+    ///
     /// # Returns
     /// * Vector of budgets (comparisons) for each algorithm
     fn allocate_budget(&self, algorithms: &[Box<dyn Sorter>]) -> Vec<usize>;
-    
+
     /// Get the model's display name
     fn name(&self) -> &str;
 }
@@ -108,16 +108,16 @@ pub trait FairnessModel: Debug {
 pub trait MemoryTracker: Debug {
     /// Record an allocation
     fn alloc(&mut self, bytes: usize);
-    
+
     /// Record a deallocation
     fn free(&mut self, bytes: usize);
-    
+
     /// Get current memory usage
     fn current(&self) -> usize;
-    
+
     /// Get peak memory usage
     fn peak(&self) -> usize;
-    
+
     /// Reset tracking
     fn reset(&mut self);
 }

@@ -1,5 +1,5 @@
 //! Visual markers for algorithm visualization
-//! 
+//!
 //! Re-exports the Markers struct from traits.rs for convenience
 //! and provides additional utilities for marker management.
 
@@ -78,32 +78,32 @@ impl Markers {
 
     /// Check if any markers are active
     pub fn has_active_markers(&self) -> bool {
-        self.pivot.is_some() 
-            || self.heap_boundary.is_some() 
-            || !self.merge_runs.is_empty() 
-            || !self.cursors.is_empty() 
+        self.pivot.is_some()
+            || self.heap_boundary.is_some()
+            || !self.merge_runs.is_empty()
+            || !self.cursors.is_empty()
             || self.gap.is_some()
     }
 
     /// Get all active marker positions as a flat vector
     pub fn get_all_positions(&self) -> Vec<usize> {
         let mut positions = Vec::new();
-        
+
         if let Some(pivot) = self.pivot {
             positions.push(pivot);
         }
-        
+
         if let Some(boundary) = self.heap_boundary {
             positions.push(boundary);
         }
-        
+
         positions.extend(self.cursors.iter().copied());
-        
+
         for (start, end) in &self.merge_runs {
             positions.push(*start);
             positions.push(*end);
         }
-        
+
         positions.sort_unstable();
         positions.dedup();
         positions

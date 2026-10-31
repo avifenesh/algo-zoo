@@ -14,7 +14,7 @@ pub struct MemoryData {
     pub current: usize,
     pub peak: usize,
     pub history: Vec<usize>,
-    pub has_started: bool,  // Track if algorithm has started processing
+    pub has_started: bool, // Track if algorithm has started processing
 }
 
 impl MemoryData {
@@ -117,7 +117,7 @@ impl MemoryGraph {
     }
 
     /// Set the title
-    pub fn title<T>(mut self, title: T) -> Self 
+    pub fn title<T>(mut self, title: T) -> Self
     where
         T: Into<String>,
     {
@@ -216,7 +216,7 @@ impl MemoryGraph {
         let mut algorithms: Vec<_> = self.data.keys().cloned().collect();
         algorithms.sort(); // Sort for consistent display order
         let algorithm_count = algorithms.len();
-        
+
         if algorithm_count == 0 {
             return;
         }
@@ -228,7 +228,9 @@ impl MemoryGraph {
         };
 
         // Find maximum memory usage for scaling
-        let max_memory = self.data.values()
+        let max_memory = self
+            .data
+            .values()
             .map(|data| data.peak.max(data.current))
             .max()
             .unwrap_or(1);
@@ -246,7 +248,7 @@ impl MemoryGraph {
                     } else {
                         algorithm
                     };
-                    
+
                     for (char_idx, ch) in display_name.chars().enumerate() {
                         let char_x = inner_area.left() + char_idx as u16;
                         if char_x < inner_area.right() {
@@ -261,12 +263,14 @@ impl MemoryGraph {
                 if line_height > 1 && y_start + 1 < inner_area.bottom() {
                     let bar_y = y_start + 1;
                     let available_width = inner_area.width.saturating_sub(15); // Leave space for values
-                    
+
                     // Current memory bar - only show if algorithm has started
                     if max_memory > 0 && memory_data.has_started {
                         let current_width = if memory_data.current > 0 {
                             // Ensure at least 1 character width for any non-zero memory
-                            ((memory_data.current as f64 / max_memory as f64) * available_width as f64).max(1.0) as u16
+                            ((memory_data.current as f64 / max_memory as f64)
+                                * available_width as f64)
+                                .max(1.0) as u16
                         } else {
                             0
                         };
@@ -280,7 +284,9 @@ impl MemoryGraph {
                         }
 
                         // Peak memory indicator (show as different character)
-                        let peak_width = ((memory_data.peak as f64 / max_memory as f64) * available_width as f64) as u16;
+                        let peak_width = ((memory_data.peak as f64 / max_memory as f64)
+                            * available_width as f64)
+                            as u16;
                         if peak_width > current_width {
                             for x in current_width..peak_width {
                                 let char_x = inner_area.left() + x;
@@ -314,9 +320,7 @@ impl MemoryGraph {
                         // Show "-" for algorithms that haven't started
                         let values_x = inner_area.right().saturating_sub(14);
                         if values_x > inner_area.left() && bar_y < inner_area.bottom() {
-                            buf[(values_x, bar_y)]
-                                .set_symbol("-")
-                                .set_style(self.style);
+                            buf[(values_x, bar_y)].set_symbol("-").set_style(self.style);
                         }
                     }
                 }
@@ -346,10 +350,7 @@ impl Widget for &MemoryGraph {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::{
-        buffer::Buffer,
-        layout::Rect,
-    };
+    use ratatui::{buffer::Buffer, layout::Rect};
 
     #[test]
     fn test_memory_graph_creation() {
@@ -365,11 +366,11 @@ mod tests {
         graph.update_algorithm("MergeSort", 2048);
 
         assert_eq!(graph.data.len(), 2);
-        
+
         let quick_data = graph.get_algorithm_data("QuickSort").unwrap();
         assert_eq!(quick_data.current, 1024);
         assert_eq!(quick_data.peak, 1024);
-        
+
         let merge_data = graph.get_algorithm_data("MergeSort").unwrap();
         assert_eq!(merge_data.current, 2048);
         assert_eq!(merge_data.peak, 2048);
@@ -419,7 +420,7 @@ mod tests {
         let mut buffer = Buffer::empty(area);
 
         graph.render_widget(area, &mut buffer);
-        
+
         // Should not panic and should have some content
         let content = buffer.content();
         assert!(!content.is_empty());

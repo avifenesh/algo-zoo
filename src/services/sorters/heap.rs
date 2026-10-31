@@ -1,6 +1,6 @@
 //! Heap Sort implementation
 
-use crate::models::traits::{Sorter, StepResult, Telemetry, Markers};
+use crate::models::traits::{Markers, Sorter, StepResult, Telemetry};
 use std::any::Any;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -41,7 +41,7 @@ impl HeapSort {
         if *budget < estimated_comparisons {
             return false; // Not enough budget to complete heapify
         }
-        
+
         loop {
             let mut largest = root;
             let left = 2 * root + 1;
@@ -56,7 +56,7 @@ impl HeapSort {
                 }
             }
 
-            // Compare with right child  
+            // Compare with right child
             if right < self.heap_size {
                 *budget = budget.saturating_sub(1);
                 self.comparisons += 1;
@@ -103,7 +103,7 @@ impl Sorter for HeapSort {
             HeapSortState::BuildHeap => {
                 while remaining_budget > 0 && self.current_index > 0 {
                     let finished = self.heapify(self.current_index - 1, &mut remaining_budget);
-                    
+
                     if finished {
                         if self.current_index == 1 {
                             // Heap building complete, start extraction
@@ -117,17 +117,17 @@ impl Sorter for HeapSort {
                         break; // Need more budget
                     }
                 }
-            }
+            },
             HeapSortState::ExtractMax => {
                 while remaining_budget > 0 && self.heap_size > 1 {
                     // Move current maximum to the end
                     self.data.swap(0, self.heap_size - 1);
                     self.moves += 1;
                     self.heap_size -= 1;
-                    
+
                     // Heapify the reduced heap
                     let finished = self.heapify(0, &mut remaining_budget);
-                    
+
                     if !finished {
                         // Restore heap_size since we couldn't complete the heapify
                         self.heap_size += 1;
@@ -135,13 +135,13 @@ impl Sorter for HeapSort {
                         self.moves += 1;
                         break; // Need more budget
                     }
-                    
+
                     if self.heap_size <= 1 {
                         self.complete = true;
                         break;
                     }
                 }
-            }
+            },
         }
 
         StepResult {
@@ -157,17 +157,17 @@ impl Sorter for HeapSort {
 
     fn get_telemetry(&self) -> Telemetry {
         let mut markers = Markers::default();
-        
+
         // Show heap boundary
         if !self.complete {
             markers.heap_boundary = Some(self.heap_size);
-            
+
             match self.state {
                 HeapSortState::BuildHeap => {
                     if self.current_index > 0 {
                         markers.cursors = vec![self.current_index - 1];
                     }
-                }
+                },
                 HeapSortState::ExtractMax => {
                     if self.heap_size > 0 {
                         markers.cursors = vec![0]; // Root of heap
@@ -175,7 +175,7 @@ impl Sorter for HeapSort {
                             markers.cursors.push(self.heap_size - 1);
                         }
                     }
-                }
+                },
             }
         }
 
@@ -191,12 +191,18 @@ impl Sorter for HeapSort {
             } else {
                 match self.state {
                     HeapSortState::BuildHeap => {
-                        format!("Building heap, processing index {}", 
-                               if self.current_index > 0 { self.current_index - 1 } else { 0 })
-                    }
+                        format!(
+                            "Building heap, processing index {}",
+                            if self.current_index > 0 {
+                                self.current_index - 1
+                            } else {
+                                0
+                            }
+                        )
+                    },
                     HeapSortState::ExtractMax => {
                         format!("Extracting max, heap size {}", self.heap_size)
-                    }
+                    },
                 }
             },
             progress_hint: if self.complete {
@@ -207,19 +213,25 @@ impl Sorter for HeapSort {
                 match self.state {
                     HeapSortState::BuildHeap => {
                         let total_build_steps = (self.data.len() / 2).max(1) as f32;
-                        let completed_steps = (self.data.len() / 2) as f32 - self.current_index as f32;
+                        let completed_steps =
+                            (self.data.len() / 2) as f32 - self.current_index as f32;
                         let progress = (completed_steps / total_build_steps).max(0.0).min(0.5);
                         if progress.is_finite() { progress } else { 0.0 }
-                    }
+                    },
                     HeapSortState::ExtractMax => {
                         if self.data.is_empty() {
                             1.0
                         } else {
-                            let extraction_progress = (self.data.len() - self.heap_size) as f32 / self.data.len() as f32;
+                            let extraction_progress =
+                                (self.data.len() - self.heap_size) as f32 / self.data.len() as f32;
                             let progress = 0.5 + extraction_progress * 0.5;
-                            if progress.is_finite() { progress.min(1.0).max(0.0) } else { 0.5 }
+                            if progress.is_finite() {
+                                progress.min(1.0).max(0.0)
+                            } else {
+                                0.5
+                            }
                         }
-                    }
+                    },
                 }
             },
         }

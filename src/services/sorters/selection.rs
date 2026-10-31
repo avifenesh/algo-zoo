@@ -1,6 +1,6 @@
 //! Selection Sort implementation
 
-use crate::models::traits::{Sorter, StepResult, Telemetry, Markers};
+use crate::models::traits::{Markers, Sorter, StepResult, Telemetry};
 use std::any::Any;
 
 /// Selection Sort algorithm implementation
@@ -95,7 +95,7 @@ impl Sorter for SelectionSort {
 
     fn get_telemetry(&self) -> Telemetry {
         let mut markers = Markers::default();
-        
+
         if !self.complete {
             if self.search_index < self.data.len() {
                 markers.cursors = vec![self.current_position, self.search_index, self.min_index];
@@ -118,10 +118,15 @@ impl Sorter for SelectionSort {
             status_text: if self.complete {
                 "Completed".to_string()
             } else if self.search_index < self.data.len() {
-                format!("Position {}, searching at {}, min at {}", 
-                       self.current_position, self.search_index, self.min_index)
+                format!(
+                    "Position {}, searching at {}, min at {}",
+                    self.current_position, self.search_index, self.min_index
+                )
             } else {
-                format!("Position {}, found min at {}", self.current_position, self.min_index)
+                format!(
+                    "Position {}, found min at {}",
+                    self.current_position, self.min_index
+                )
             },
             progress_hint: if self.data.len() <= 1 {
                 1.0

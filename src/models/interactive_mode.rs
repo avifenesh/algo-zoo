@@ -1,8 +1,6 @@
 //! Interactive mode state machine for terminal interface
 
-use crate::models::{
-    configuration::{ConfigurationState, DistributionType},
-};
+use crate::models::configuration::{ConfigurationState, DistributionType};
 use anyhow::{Result, anyhow};
 use std::time::Instant;
 
@@ -177,7 +175,10 @@ impl InteractiveMode {
                 Ok(())
             },
             ApplicationMode::Configuration => Ok(()), // Already in configuration
-            _ => Err(anyhow!("Cannot transition to Configuration from {:?}", self.current_mode)),
+            _ => Err(anyhow!(
+                "Cannot transition to Configuration from {:?}",
+                self.current_mode
+            )),
         }
     }
 
@@ -209,7 +210,10 @@ impl InteractiveMode {
                 self.needs_update = true;
                 Ok(())
             },
-            _ => Err(anyhow!("Cannot transition to Racing from {:?}", self.current_mode)),
+            _ => Err(anyhow!(
+                "Cannot transition to Racing from {:?}",
+                self.current_mode
+            )),
         }
     }
 
@@ -222,7 +226,10 @@ impl InteractiveMode {
                 self.needs_update = true;
                 Ok(())
             },
-            _ => Err(anyhow!("Cannot transition to Paused from {:?}", self.current_mode)),
+            _ => Err(anyhow!(
+                "Cannot transition to Paused from {:?}",
+                self.current_mode
+            )),
         }
     }
 
@@ -235,7 +242,10 @@ impl InteractiveMode {
                 self.needs_update = true;
                 Ok(())
             },
-            _ => Err(anyhow!("Cannot transition to Complete from {:?}", self.current_mode)),
+            _ => Err(anyhow!(
+                "Cannot transition to Complete from {:?}",
+                self.current_mode
+            )),
         }
     }
 
@@ -300,7 +310,7 @@ impl InteractiveMode {
             Err(e) => {
                 self.set_error_message(e.to_string());
                 false
-            }
+            },
         }
     }
 
@@ -369,26 +379,26 @@ mod tests {
     #[test]
     fn test_application_mode_transitions() {
         let mut mode = InteractiveMode::new();
-        
+
         // Configuration -> Racing
         assert!(mode.transition_to_racing().is_ok());
         assert_eq!(mode.current_mode, ApplicationMode::Racing);
         assert!(mode.is_race_timer_active());
-        
+
         // Racing -> Paused
         assert!(mode.transition_to_paused().is_ok());
         assert_eq!(mode.current_mode, ApplicationMode::Paused);
         assert!(mode.is_race_timer_paused());
-        
+
         // Paused -> Racing
         assert!(mode.transition_to_racing().is_ok());
         assert_eq!(mode.current_mode, ApplicationMode::Racing);
         assert!(mode.is_race_timer_active());
-        
+
         // Racing -> Complete
         assert!(mode.transition_to_complete().is_ok());
         assert_eq!(mode.current_mode, ApplicationMode::Complete);
-        
+
         // Complete -> Configuration
         assert!(mode.transition_to_configuration().is_ok());
         assert_eq!(mode.current_mode, ApplicationMode::Configuration);
@@ -397,11 +407,11 @@ mod tests {
     #[test]
     fn test_configuration_focus() {
         let mut mode = InteractiveMode::new();
-        
+
         assert!(mode.set_config_focus(ConfigurationField::ArraySize).is_ok());
         assert_eq!(mode.config_focus, Some(ConfigurationField::ArraySize));
         assert!(mode.is_menu_visible());
-        
+
         mode.clear_config_focus();
         assert_eq!(mode.config_focus, None);
         assert!(!mode.is_menu_visible());
@@ -410,20 +420,23 @@ mod tests {
     #[test]
     fn test_focus_blocked_during_racing() {
         let mut mode = InteractiveMode::new();
-        
+
         mode.transition_to_racing().unwrap();
-        assert!(mode.set_config_focus(ConfigurationField::ArraySize).is_err());
+        assert!(
+            mode.set_config_focus(ConfigurationField::ArraySize)
+                .is_err()
+        );
     }
 
     #[test]
     fn test_help_toggle() {
         let mut mode = InteractiveMode::new();
-        
+
         assert!(!mode.should_show_help_overlay());
-        
+
         mode.toggle_help();
         assert!(mode.should_show_help_overlay());
-        
+
         mode.toggle_help();
         assert!(!mode.should_show_help_overlay());
     }
@@ -431,12 +444,12 @@ mod tests {
     #[test]
     fn test_array_view_cycling() {
         let mut mode = InteractiveMode::new();
-        
+
         assert_eq!(mode.array_view_algorithm, 0);
-        
+
         mode.cycle_array_view_algorithm(7);
         assert_eq!(mode.array_view_algorithm, 1);
-        
+
         mode.set_array_view_algorithm(6);
         mode.cycle_array_view_algorithm(7);
         assert_eq!(mode.array_view_algorithm, 0); // Should wrap around
@@ -445,13 +458,13 @@ mod tests {
     #[test]
     fn test_error_handling() {
         let mut mode = InteractiveMode::new();
-        
+
         assert!(!mode.is_error_message_visible());
-        
+
         mode.set_error_message("Test error".to_string());
         assert!(mode.is_error_message_visible());
         assert_eq!(mode.get_error_message(), Some("Test error"));
-        
+
         mode.clear_error_message();
         assert!(!mode.is_error_message_visible());
         assert_eq!(mode.get_error_message(), None);
@@ -460,11 +473,11 @@ mod tests {
     #[test]
     fn test_array_size_validation() {
         let mut mode = InteractiveMode::new();
-        
+
         assert!(mode.set_array_size_interactive(100).is_ok());
         assert!(!mode.attempt_set_array_size(5)); // Too small
         assert!(mode.is_error_message_visible());
-        
+
         mode.clear_error_message();
         assert!(mode.attempt_set_array_size(500)); // Valid
         assert!(!mode.is_error_message_visible());
@@ -474,7 +487,7 @@ mod tests {
     fn test_help_content() {
         let mode = InteractiveMode::new();
         let help_content = mode.get_help_overlay_content();
-        
+
         assert!(help_content.contains("k - Array size configuration"));
         assert!(help_content.contains("b - Distribution configuration"));
         assert!(help_content.contains("f - Fairness mode configuration"));

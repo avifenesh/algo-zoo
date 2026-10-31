@@ -1,6 +1,6 @@
 //! Insertion Sort implementation
 
-use crate::models::traits::{Sorter, StepResult, Telemetry, Markers};
+use crate::models::traits::{Markers, Sorter, StepResult, Telemetry};
 use std::any::Any;
 
 /// Insertion Sort algorithm implementation
@@ -55,7 +55,7 @@ impl Sorter for InsertionSort {
                     self.complete = true;
                     break;
                 }
-                
+
                 self.insert_pos = self.current_index;
                 self.in_insertion = true;
             }
@@ -96,7 +96,7 @@ impl Sorter for InsertionSort {
 
     fn get_telemetry(&self) -> Telemetry {
         let mut markers = Markers::default();
-        
+
         if !self.complete {
             if self.in_insertion {
                 markers.cursors = vec![self.insert_pos];

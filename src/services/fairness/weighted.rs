@@ -7,21 +7,21 @@ use std::collections::HashMap;
 /// Algorithms with lower weighted scores get more budget (inverse fairness)
 #[derive(Debug)]
 pub struct WeightedFairness {
-    alpha: f32,  // Weight for comparisons
-    beta: f32,   // Weight for moves
+    alpha: f32, // Weight for comparisons
+    beta: f32,  // Weight for moves
     base_budget: usize,
 }
 
 impl WeightedFairness {
     /// Create a new weighted fairness model
-    /// 
+    ///
     /// # Arguments
     /// * `alpha` - Weight for comparisons in the scoring formula
     /// * `beta` - Weight for moves in the scoring formula
     pub fn new(alpha: f32, beta: f32) -> Self {
         Self {
             alpha,
-            beta, 
+            beta,
             base_budget: 100, // Default base budget
         }
     }
@@ -87,11 +87,11 @@ impl FairnessModel for WeightedFairness {
 
         // Calculate total weighted scores for normalization
         let total_score: f32 = active_algorithms.iter().map(|(_, score)| *score).sum();
-        
+
         // Inverse fairness: algorithms with lower scores get MORE budget
         let mut budgets = vec![0; algorithms.len()];
         let total_budget = self.base_budget * active_algorithms.len();
-        
+
         if total_score == 0.0 {
             // If all scores are zero, distribute equally among active algorithms
             let equal_budget = total_budget / active_algorithms.len();
@@ -102,13 +102,18 @@ impl FairnessModel for WeightedFairness {
             // Calculate inverse weights (lower score = higher budget)
             for (idx, score) in &active_algorithms {
                 // Inverse proportion: (total - score) / total gives higher budget to lower scores
-                let max_score = active_algorithms.iter().map(|(_, s)| *s).fold(0.0f32, f32::max);
+                let max_score = active_algorithms
+                    .iter()
+                    .map(|(_, s)| *s)
+                    .fold(0.0f32, f32::max);
                 let inverse_score = max_score - score + 1.0; // Add 1 to avoid zero division
-                let total_inverse: f32 = active_algorithms.iter()
+                let total_inverse: f32 = active_algorithms
+                    .iter()
                     .map(|(_, s)| max_score - s + 1.0)
                     .sum();
-                
-                let budget = ((total_budget as f32 * inverse_score) / total_inverse).round() as usize;
+
+                let budget =
+                    ((total_budget as f32 * inverse_score) / total_inverse).round() as usize;
                 budgets[*idx] = budget.max(1); // Ensure minimum budget
             }
         }
@@ -141,12 +146,13 @@ impl PerformanceWeightedFairness {
 
     /// Record efficiency for an algorithm
     pub fn record_efficiency(&mut self, algorithm_name: &str, efficiency: f32) {
-        let history = self.efficiency_history
+        let history = self
+            .efficiency_history
             .entry(algorithm_name.to_string())
             .or_default();
-        
+
         history.push(efficiency.max(0.0));
-        
+
         // Keep only recent history
         if history.len() > self.history_window {
             history.remove(0);
@@ -191,7 +197,13 @@ impl FairnessModel for PerformanceWeightedFairness {
             // Fallback to equal allocation
             return algorithms
                 .iter()
-                .map(|alg| if alg.is_complete() { 0 } else { self.base_budget })
+                .map(|alg| {
+                    if alg.is_complete() {
+                        0
+                    } else {
+                        self.base_budget
+                    }
+                })
                 .collect();
         }
 
@@ -203,7 +215,9 @@ impl FairnessModel for PerformanceWeightedFairness {
                 } else {
                     let efficiency = self.get_average_efficiency(algorithm.name());
                     let proportion = efficiency / total_efficiency;
-                    let weighted_budget = (self.base_budget as f32 * proportion * algorithms.len() as f32).round() as usize;
+                    let weighted_budget =
+                        (self.base_budget as f32 * proportion * algorithms.len() as f32).round()
+                            as usize;
                     weighted_budget.max(1)
                 }
             })
@@ -223,23 +237,20 @@ mod tests {
     #[test]
     fn test_weighted_fairness_different_algorithms() {
         let fairness = WeightedFairness::new(1.0, 1.0); // Equal weights
-        
+
         let mut bubble = BubbleSort::new();
         let mut quick = QuickSort::new();
         bubble.reset(vec![3, 1, 2]);
         quick.reset(vec![3, 1, 2]);
 
-        let algorithms: Vec<Box<dyn Sorter>> = vec![
-            Box::new(bubble),
-            Box::new(quick),
-        ];
+        let algorithms: Vec<Box<dyn Sorter>> = vec![Box::new(bubble), Box::new(quick)];
 
         let budgets = fairness.allocate_budget(&algorithms);
-        
+
         // Both should get some budget
         assert!(budgets[0] > 0);
         assert!(budgets[1] > 0);
-        
+
         // Total budget should be reasonable
         let total: usize = budgets.iter().sum();
         assert!(total > 0);
@@ -248,12 +259,12 @@ mod tests {
     #[test]
     fn test_performance_weighted_fairness() {
         let mut fairness = PerformanceWeightedFairness::new(10, 5);
-        
+
         // Record some efficiency data
         fairness.record_efficiency("Algorithm A", 2.0);
         fairness.record_efficiency("Algorithm A", 1.5);
         fairness.record_efficiency("Algorithm B", 1.0);
-        
+
         assert_eq!(fairness.get_average_efficiency("Algorithm A"), 1.75);
         assert_eq!(fairness.get_average_efficiency("Algorithm B"), 1.0);
     }
@@ -261,28 +272,33 @@ mod tests {
     #[test]
     fn test_weighted_fairness_alpha_beta_scoring() {
         let fairness = WeightedFairness::new(2.0, 0.5); // Favor comparisons
-        
+
         // Create mock algorithms with different stats
         let mut high_comp = BubbleSort::new();
         let mut high_move = BubbleSort::new();
         high_comp.reset(vec![10, 9, 8, 7, 6, 5, 4, 3, 2, 1]); // Larger reverse-sorted array
         high_move.reset(vec![1, 3, 2, 4, 5, 7, 6, 8, 9, 10]); // Larger partially sorted
-        
+
         // Simulate different amounts of work
         high_comp.step(20); // Do more comparisons
-        high_move.step(5);  // Do fewer comparisons
-        
-        let algorithms: Vec<Box<dyn Sorter>> = vec![
-            Box::new(high_comp),
-            Box::new(high_move),
-        ];
-        
+        high_move.step(5); // Do fewer comparisons
+
+        let algorithms: Vec<Box<dyn Sorter>> = vec![Box::new(high_comp), Box::new(high_move)];
+
         let budgets = fairness.allocate_budget(&algorithms);
-        
+
         assert_eq!(budgets.len(), 2);
-        assert!(budgets[0] > 0, "First algorithm should get budget > 0, got {}", budgets[0]);
-        assert!(budgets[1] > 0, "Second algorithm should get budget > 0, got {}", budgets[1]);
-        
+        assert!(
+            budgets[0] > 0,
+            "First algorithm should get budget > 0, got {}",
+            budgets[0]
+        );
+        assert!(
+            budgets[1] > 0,
+            "Second algorithm should get budget > 0, got {}",
+            budgets[1]
+        );
+
         // The algorithm with fewer weighted operations should get more budget
         let total: usize = budgets.iter().sum();
         assert!(total > 0);

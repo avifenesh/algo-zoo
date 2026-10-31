@@ -1,6 +1,6 @@
 //! Bubble Sort implementation
 
-use crate::models::traits::{Sorter, StepResult, Telemetry, Markers};
+use crate::models::traits::{Markers, Sorter, StepResult, Telemetry};
 use std::any::Any;
 
 /// Bubble Sort algorithm implementation
@@ -87,7 +87,7 @@ impl Sorter for BubbleSort {
 
     fn get_telemetry(&self) -> Telemetry {
         let mut markers = Markers::default();
-        
+
         if !self.complete && self.current_pos < self.data.len() {
             markers.cursors = vec![self.current_pos];
             if self.current_pos + 1 < self.data.len() {
@@ -105,7 +105,11 @@ impl Sorter for BubbleSort {
             status_text: if self.complete {
                 "Completed".to_string()
             } else {
-                format!("Pass {}, Position {}", self.current_pass + 1, self.current_pos)
+                format!(
+                    "Pass {}, Position {}",
+                    self.current_pass + 1,
+                    self.current_pos
+                )
             },
             progress_hint: if self.data.len() <= 1 {
                 1.0

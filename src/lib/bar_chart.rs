@@ -78,7 +78,7 @@ impl BarChart {
     }
 
     /// Set title
-    pub fn title<T>(mut self, title: T) -> Self 
+    pub fn title<T>(mut self, title: T) -> Self
     where
         T: Into<String>,
     {
@@ -127,7 +127,11 @@ impl BarChart {
     }
 
     /// Create a compact visualization using blocks instead of numbers for very large arrays
-    pub fn from_array_compact(array: &[i32], highlights: &[usize], terminal_width: u16) -> (Self, String) {
+    pub fn from_array_compact(
+        array: &[i32],
+        highlights: &[usize],
+        terminal_width: u16,
+    ) -> (Self, String) {
         let array_len = array.len();
         let available_width = terminal_width.saturating_sub(4) as usize;
 
@@ -187,7 +191,10 @@ impl BarChart {
         }
 
         let indicator = if sample_rate > 1 {
-            format!("[Compact view: 1:{} sampling of {} elements]", sample_rate, array_len)
+            format!(
+                "[Compact view: 1:{} sampling of {} elements]",
+                sample_rate, array_len
+            )
         } else {
             format!("[Compact view: {} elements]", array_len)
         };
@@ -200,7 +207,7 @@ impl BarChart {
         array: &[i32],
         highlights: &[usize],
         terminal_width: u16,
-        viewport_center: Option<usize>
+        viewport_center: Option<usize>,
     ) -> (Self, String) {
         let array_len = array.len();
 
@@ -221,7 +228,7 @@ impl BarChart {
             // Need viewport
             let center = viewport_center
                 .or_else(|| highlights.first().copied())  // Center on first highlight
-                .unwrap_or(array_len / 2);  // Or center of array
+                .unwrap_or(array_len / 2); // Or center of array
 
             let half_view = max_elements / 2;
             let start = center.saturating_sub(half_view);
@@ -282,7 +289,9 @@ impl BarChart {
 
         if bar_count > 0 {
             // Find the maximum number of digits needed for any value
-            let max_digits = self.data.iter()
+            let max_digits = self
+                .data
+                .iter()
                 .map(|(_, value)| value.to_string().len() as u16)
                 .max()
                 .unwrap_or(1);
@@ -344,7 +353,7 @@ impl BarChart {
         let bar_height_scale = self.max_height.min(available_height) as f64;
 
         let mut x_offset = inner_area.left();
-        
+
         for (i, (label, value)) in self.data.iter().enumerate() {
             if x_offset + self.bar_width >= inner_area.right() {
                 break; // No more space
@@ -370,9 +379,7 @@ impl BarChart {
                 if bar_y >= inner_area.top() && bar_y < inner_area.bottom() {
                     for x in x_offset..x_offset + self.bar_width {
                         if x < inner_area.right() {
-                            buf[(x, bar_y)]
-                                .set_symbol("█")
-                                .set_style(current_bar_style);
+                            buf[(x, bar_y)].set_symbol("█").set_style(current_bar_style);
                         }
                     }
                 }
@@ -474,19 +481,15 @@ impl Widget for &BarChart {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::{
-        buffer::Buffer,
-        layout::Rect,
-        style::Color,
-    };
+    use ratatui::{buffer::Buffer, layout::Rect, style::Color};
 
     #[test]
     fn test_bar_chart_creation_from_array_data() {
         let array_data = vec![5, 3, 8, 1, 9, 2];
         let highlights = vec![];
-        
+
         let chart = BarChart::from_array_with_colors(&array_data, &highlights);
-        
+
         assert_eq!(chart.data.len(), 6);
         assert_eq!(chart.data[0], ("5".to_string(), 5));
         assert_eq!(chart.data[1], ("3".to_string(), 3));
@@ -496,17 +499,18 @@ mod tests {
     #[test]
     fn test_color_mapping_for_operations() {
         let array_data = vec![5, 3, 8, 1];
-        
+
         // Test comparison operation (two highlights = blue)
         let comparison_highlights = vec![0, 2];
-        let comparison_chart = BarChart::from_array_with_colors(&array_data, &comparison_highlights);
+        let comparison_chart =
+            BarChart::from_array_with_colors(&array_data, &comparison_highlights);
         assert_eq!(comparison_chart.bar_style.fg, Some(Color::Blue));
-        
+
         // Test swap operation (one highlight = red)
         let swap_highlights = vec![1];
         let swap_chart = BarChart::from_array_with_colors(&array_data, &swap_highlights);
         assert_eq!(swap_chart.bar_style.fg, Some(Color::Red));
-        
+
         // Test no operation (no highlights = default)
         let no_highlights = vec![];
         let default_chart = BarChart::from_array_with_colors(&array_data, &no_highlights);
@@ -517,15 +521,15 @@ mod tests {
     fn test_height_scaling_for_different_terminal_sizes() {
         let array_data = vec![1, 2, 3, 4, 5];
         let highlights = vec![];
-        
+
         // Test small terminal
-        let chart_small = BarChart::from_array_with_colors(&array_data, &highlights)
-            .scale_for_terminal(40, 10);
+        let chart_small =
+            BarChart::from_array_with_colors(&array_data, &highlights).scale_for_terminal(40, 10);
         assert!(chart_small.max_height <= 4);
-        
+
         // Test large terminal
-        let chart_large = BarChart::from_array_with_colors(&array_data, &highlights)
-            .scale_for_terminal(120, 30);
+        let chart_large =
+            BarChart::from_array_with_colors(&array_data, &highlights).scale_for_terminal(120, 30);
         assert!(chart_large.max_height >= 10);
         assert!(chart_large.max_height <= 20);
     }
@@ -534,12 +538,12 @@ mod tests {
     fn test_bar_width_scaling_for_many_elements() {
         let array_data: Vec<i32> = (0..50).collect();
         let highlights = vec![];
-        
-        let chart = BarChart::from_array_with_colors(&array_data, &highlights)
-            .scale_for_terminal(60, 20);
-        
+
+        let chart =
+            BarChart::from_array_with_colors(&array_data, &highlights).scale_for_terminal(60, 20);
+
         assert!(chart.bar_width <= 2);
-        
+
         let total_width = array_data.len() as u16 * (chart.bar_width + chart.bar_gap);
         assert!(total_width <= 56);
     }
@@ -549,13 +553,13 @@ mod tests {
         let array_data = vec![5, 3, 8, 1];
         let highlights = vec![0, 2];
         let chart = BarChart::from_array_with_colors(&array_data, &highlights);
-        
+
         let area = Rect::new(0, 0, 40, 10);
         let mut buffer = Buffer::empty(area);
-        
+
         // Should not panic
         chart.render(area, &mut buffer);
-        
+
         // Buffer should have some content
         let content = buffer.content();
         assert!(!content.is_empty());
@@ -585,9 +589,9 @@ mod tests {
         let empty_data = vec![];
         let highlights = vec![];
         let chart = BarChart::from_array_with_colors(&empty_data, &highlights);
-        
+
         assert_eq!(chart.data.len(), 0);
-        
+
         let scaled_chart = chart.scale_for_terminal(80, 20);
         assert!(scaled_chart.bar_width >= 1);
     }
@@ -597,7 +601,7 @@ mod tests {
         let array_data = vec![-5, 3, -1, 8];
         let highlights = vec![];
         let chart = BarChart::from_array_with_colors(&array_data, &highlights);
-        
+
         // Negative values should show the value as label but 0 height
         assert_eq!(chart.data[0], ("-5".to_string(), 0));
         assert_eq!(chart.data[1], ("3".to_string(), 3));

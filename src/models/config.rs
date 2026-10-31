@@ -117,23 +117,23 @@ impl RunConfiguration {
                 if *k == 0 {
                     return Err("Comparison budget must be greater than 0".to_string());
                 }
-            }
+            },
             FairnessMode::WallTime { slice_ms } => {
                 if *slice_ms == 0 {
                     return Err("Wall time limit must be greater than 0".to_string());
                 }
-            }
+            },
             FairnessMode::Weighted { alpha, beta } => {
                 if *alpha < 0.0 || *beta < 0.0 {
                     return Err("Weights must be non-negative".to_string());
                 }
-            }
+            },
             FairnessMode::Adaptive { learning_rate } => {
                 if *learning_rate < 0.0 || *learning_rate > 1.0 {
                     return Err("Learning rate must be between 0.0 and 1.0".to_string());
                 }
-            }
-            FairnessMode::EqualSteps => {}
+            },
+            FairnessMode::EqualSteps => {},
         }
 
         Ok(())

@@ -42,7 +42,7 @@ impl ProgressBar {
     }
 
     /// Set the label
-    pub fn label<T>(mut self, label: T) -> Self 
+    pub fn label<T>(mut self, label: T) -> Self
     where
         T: Into<String>,
     {
@@ -110,15 +110,16 @@ impl ProgressBar {
 
         // Reserve space for label and percentage if needed
         if ((self.show_label && !self.label.is_empty()) || self.show_percentage)
-            && inner_area.height >= 2 {
-                bar_area.height = inner_area.height - 1;
-                info_area = Some(Rect {
-                    x: inner_area.x,
-                    y: inner_area.y + bar_area.height,
-                    width: inner_area.width,
-                    height: 1,
-                });
-            }
+            && inner_area.height >= 2
+        {
+            bar_area.height = inner_area.height - 1;
+            info_area = Some(Rect {
+                x: inner_area.x,
+                y: inner_area.y + bar_area.height,
+                width: inner_area.width,
+                height: 1,
+            });
+        }
 
         // Render the progress bar
         let filled_width = (self.progress * bar_area.width as f32) as u16;
@@ -128,28 +129,24 @@ impl ProgressBar {
         for y in bar_area.top()..bar_area.bottom() {
             for x in bar_area.left()..(bar_area.left() + filled_width) {
                 if x < bar_area.right() {
-                    buf[(x, y)]
-                        .set_symbol("█")
-                        .set_style(self.filled_style);
+                    buf[(x, y)].set_symbol("█").set_style(self.filled_style);
                 }
             }
-            
+
             // Fill the empty portion
             for x in (bar_area.left() + filled_width)..bar_area.right() {
-                buf[(x, y)]
-                    .set_symbol("░")
-                    .set_style(self.empty_style);
+                buf[(x, y)].set_symbol("░").set_style(self.empty_style);
             }
         }
 
         // Render label and percentage
         if let Some(info_area) = info_area {
             let mut info_text = String::new();
-            
+
             if self.show_label && !self.label.is_empty() {
                 info_text.push_str(&self.label);
             }
-            
+
             if self.show_percentage {
                 if !info_text.is_empty() {
                     info_text.push(' ');
@@ -214,26 +211,22 @@ impl ProgressBars {
     }
 
     /// Add or update a progress bar
-    pub fn add_bar<T>(&mut self, name: T, progress: f32) 
+    pub fn add_bar<T>(&mut self, name: T, progress: f32)
     where
         T: Into<String>,
     {
         let name_string = name.into();
-        
+
         // Check if bar already exists
         for (existing_name, bar) in &mut self.bars {
             if *existing_name == name_string {
-                *bar = ProgressBar::new()
-                    .label(&name_string)
-                    .progress(progress);
+                *bar = ProgressBar::new().label(&name_string).progress(progress);
                 return;
             }
         }
-        
+
         // Add new bar
-        let bar = ProgressBar::new()
-            .label(&name_string)
-            .progress(progress);
+        let bar = ProgressBar::new().label(&name_string).progress(progress);
         self.bars.push((name_string, bar));
     }
 
@@ -297,7 +290,7 @@ impl ProgressBars {
 
         for (i, (_name, bar)) in self.bars.iter().enumerate() {
             let y = start_y + (i as u16 * bar_height);
-            
+
             if y >= inner_area.bottom() {
                 break;
             }
@@ -335,10 +328,7 @@ impl Widget for &ProgressBars {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ratatui::{
-        buffer::Buffer,
-        layout::Rect,
-    };
+    use ratatui::{buffer::Buffer, layout::Rect};
 
     #[test]
     fn test_progress_bar_creation() {
@@ -346,7 +336,7 @@ mod tests {
             .progress(0.5)
             .label("Test")
             .show_percentage(true);
-        
+
         assert!((bar.progress - 0.5).abs() < f32::EPSILON);
         assert_eq!(bar.label, "Test");
         assert!(bar.show_percentage);
@@ -366,7 +356,7 @@ mod tests {
         let mut bars = ProgressBars::new();
         bars.add_bar("Algorithm1", 0.3);
         bars.add_bar("Algorithm2", 0.7);
-        
+
         assert_eq!(bars.len(), 2);
         assert!(!bars.is_empty());
 
@@ -386,7 +376,7 @@ mod tests {
         let mut buffer = Buffer::empty(area);
 
         bar.render_widget(area, &mut buffer);
-        
+
         // Should not panic and should have some content
         let content = buffer.content();
         assert!(!content.is_empty());
@@ -403,7 +393,7 @@ mod tests {
         let mut buffer = Buffer::empty(area);
 
         bars.render_widget(area, &mut buffer);
-        
+
         // Should not panic and should have some content
         let content = buffer.content();
         assert!(!content.is_empty());
@@ -428,7 +418,7 @@ mod tests {
         let tiny_area = Rect::new(0, 0, 1, 1);
         let mut buffer = Buffer::empty(tiny_area);
         bar.render_widget(tiny_area, &mut buffer);
-        
+
         // Should handle gracefully without panicking
     }
 }

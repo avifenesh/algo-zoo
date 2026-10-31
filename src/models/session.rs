@@ -1,8 +1,8 @@
 //! Session state management for multiple sorting races
 
 use crate::models::{
-    configuration::{ConfigurationState, DistributionType},
     config::FairnessMode,
+    configuration::{ConfigurationState, DistributionType},
     traits::Sorter,
 };
 use std::time::Instant;
@@ -124,7 +124,7 @@ impl RaceResult {
     pub fn set_completion_time(&mut self, algorithm_index: usize, duration: std::time::Duration) {
         if algorithm_index < self.completion_times.len() {
             self.completion_times[algorithm_index] = Some(duration);
-            
+
             // Set winner if this is the first completion
             if self.winner.is_none() {
                 self.winner = AlgorithmType::from_index(algorithm_index);
@@ -265,7 +265,8 @@ impl SessionState {
             return None;
         }
 
-        let total_duration: std::time::Duration = self.run_history
+        let total_duration: std::time::Duration = self
+            .run_history
             .iter()
             .filter_map(|result| result.total_duration)
             .sum();
@@ -278,7 +279,7 @@ impl SessionState {
         use std::collections::HashMap;
 
         let mut winner_counts: HashMap<AlgorithmType, u32> = HashMap::new();
-        
+
         for result in &self.run_history {
             if let Some(winner) = result.winner {
                 *winner_counts.entry(winner).or_insert(0) += 1;
@@ -358,7 +359,10 @@ mod tests {
 
     #[test]
     fn test_algorithm_type_conversions() {
-        assert_eq!(AlgorithmType::from_index(0), Some(AlgorithmType::BubbleSort));
+        assert_eq!(
+            AlgorithmType::from_index(0),
+            Some(AlgorithmType::BubbleSort)
+        );
         assert_eq!(AlgorithmType::from_index(6), Some(AlgorithmType::ShellSort));
         assert_eq!(AlgorithmType::from_index(7), None);
 
@@ -370,8 +374,13 @@ mod tests {
 
     #[test]
     fn test_race_result_creation() {
-        let result = RaceResult::new(100, DistributionType::Shuffled, FairnessMode::WallTime { slice_ms: 50 }, 7);
-        
+        let result = RaceResult::new(
+            100,
+            DistributionType::Shuffled,
+            FairnessMode::WallTime { slice_ms: 50 },
+            7,
+        );
+
         assert_eq!(result.array_size, 100);
         assert_eq!(result.distribution, DistributionType::Shuffled);
         assert_eq!(result.completion_times.len(), 7);
@@ -382,11 +391,16 @@ mod tests {
 
     #[test]
     fn test_race_result_completion() {
-        let mut result = RaceResult::new(50, DistributionType::Reversed, FairnessMode::WallTime { slice_ms: 50 }, 3);
-        
+        let mut result = RaceResult::new(
+            50,
+            DistributionType::Reversed,
+            FairnessMode::WallTime { slice_ms: 50 },
+            3,
+        );
+
         result.set_completion_time(1, std::time::Duration::from_millis(100));
         assert_eq!(result.winner, Some(AlgorithmType::SelectionSort));
-        
+
         result.complete();
         assert!(result.is_complete());
         assert!(result.total_duration.is_some());
@@ -395,7 +409,7 @@ mod tests {
     #[test]
     fn test_session_state_creation() {
         let session = SessionState::new();
-        
+
         assert_eq!(session.total_races_run, 0);
         assert!(session.run_history.is_empty());
         assert!(!session.has_current_race());
@@ -405,11 +419,11 @@ mod tests {
     #[test]
     fn test_session_race_lifecycle() {
         let mut session = SessionState::new();
-        
+
         // Start new race
         assert!(session.start_new_race().is_ok());
         assert!(session.has_current_race());
-        
+
         // Complete race
         session.complete_current_race();
         assert!(!session.has_current_race());
@@ -439,17 +453,17 @@ mod tests {
     fn test_winner_tracking() {
         let session = SessionState::new();
         assert_eq!(session.get_most_common_winner(), None);
-        
+
         // Would need to set up actual race results to test winner tracking fully
     }
 
     #[test]
     fn test_configuration_validation() {
         let mut session = SessionState::new();
-        
+
         // Default config should be valid
         assert!(session.start_new_race().is_ok());
-        
+
         // Invalid config should fail
         session.current_config.array_size = 0; // Invalid
         assert!(session.start_new_race().is_err());

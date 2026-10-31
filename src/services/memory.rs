@@ -124,18 +124,18 @@ mod tests {
     #[test]
     fn test_standard_memory_tracker() {
         let mut tracker = StandardMemoryTracker::new();
-        
+
         assert_eq!(tracker.current(), 0);
         assert_eq!(tracker.peak(), 0);
-        
+
         tracker.alloc(100);
         assert_eq!(tracker.current(), 100);
         assert_eq!(tracker.peak(), 100);
-        
+
         tracker.free(50);
         assert_eq!(tracker.current(), 50);
         assert_eq!(tracker.peak(), 100);
-        
+
         tracker.reset();
         assert_eq!(tracker.current(), 0);
         assert_eq!(tracker.peak(), 0);
@@ -144,14 +144,14 @@ mod tests {
     #[test]
     fn test_verbose_memory_tracker() {
         let mut tracker = VerboseMemoryTracker::new();
-        
+
         tracker.alloc(100);
         tracker.free(50);
         tracker.reset();
-        
+
         let ops = tracker.get_operations();
         assert_eq!(ops.len(), 3);
-        
+
         assert_eq!(ops[0].op_type, MemoryOpType::Alloc);
         assert_eq!(ops[1].op_type, MemoryOpType::Free);
         assert_eq!(ops[2].op_type, MemoryOpType::Reset);

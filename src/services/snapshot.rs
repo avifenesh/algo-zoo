@@ -1,7 +1,7 @@
 //! Snapshot functionality for algorithm states
 
-use crate::models::traits::{Sorter, Telemetry};
 use crate::models::metrics::MetricsSnapshot;
+use crate::models::traits::{Sorter, Telemetry};
 use std::time::SystemTime;
 
 /// A snapshot of the complete algorithm race state
@@ -51,7 +51,7 @@ impl SnapshotService {
     /// Take a snapshot of the current race state
     pub fn take_snapshot(&mut self, algorithms: &[Box<dyn Sorter>], step: usize) -> &RaceSnapshot {
         let race_complete = algorithms.iter().all(|alg| alg.is_complete());
-        
+
         let algorithm_snapshots = algorithms
             .iter()
             .map(|algorithm| {
@@ -133,7 +133,7 @@ impl SnapshotService {
     /// Set maximum number of snapshots to keep
     pub fn set_max_snapshots(&mut self, max: usize) {
         self.max_snapshots = max.max(1);
-        
+
         // Trim existing snapshots if necessary
         while self.snapshots.len() > self.max_snapshots {
             self.snapshots.remove(0);
@@ -166,7 +166,7 @@ mod tests {
         bubble.reset(vec![3, 1, 2]);
 
         let algorithms: Vec<Box<dyn Sorter>> = vec![Box::new(bubble)];
-        
+
         let snapshot = service.take_snapshot(&algorithms, 1);
         assert_eq!(snapshot.step, 1);
         assert_eq!(snapshot.algorithm_snapshots.len(), 1);
@@ -185,7 +185,7 @@ mod tests {
         }
 
         assert_eq!(service.len(), 3); // Should not exceed max
-        
+
         // Should have the last 3 snapshots (steps 2, 3, 4)
         let snapshots = service.get_snapshots();
         assert_eq!(snapshots[0].step, 2);

@@ -1,7 +1,7 @@
 //! Main controller for the sorting race
 
 use crate::models::config::RunConfiguration;
-use crate::models::traits::{Sorter, FairnessModel};
+use crate::models::traits::{FairnessModel, Sorter};
 use crate::services::snapshot::SnapshotService;
 use std::time::Instant;
 
@@ -80,7 +80,8 @@ impl RaceController {
         self.current_step += 1;
 
         // Take snapshot
-        self.snapshot_service.take_snapshot(&self.algorithms, self.current_step);
+        self.snapshot_service
+            .take_snapshot(&self.algorithms, self.current_step);
 
         // Check if race is complete
         if self.is_race_complete() {

@@ -1,11 +1,8 @@
 //! Display mode for controlling array visualization
 
-use crate::models::{
-    session::AlgorithmType,
-    traits::Sorter,
-};
+use crate::models::{session::AlgorithmType, traits::Sorter};
 use anyhow::{Result, anyhow};
-use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 /// Controls which algorithm's array visualization is shown
 #[derive(Debug, Clone)]
 pub struct DisplayMode {
@@ -34,7 +31,9 @@ impl DisplayMode {
     /// Create display mode with specific algorithm set
     pub fn with_algorithms(algorithms: Vec<AlgorithmType>) -> Result<Self> {
         if algorithms.is_empty() {
-            return Err(anyhow!("Cannot create DisplayMode with empty algorithm list"));
+            return Err(anyhow!(
+                "Cannot create DisplayMode with empty algorithm list"
+            ));
         }
 
         Ok(Self {
@@ -62,13 +61,20 @@ impl DisplayMode {
 
     /// Set viewed algorithm by type
     pub fn set_viewed_algorithm(&mut self, algorithm_type: AlgorithmType) -> Result<()> {
-        if let Some(index) = self.available_algorithms.iter().position(|&alg| alg == algorithm_type) {
+        if let Some(index) = self
+            .available_algorithms
+            .iter()
+            .position(|&alg| alg == algorithm_type)
+        {
             self.cycle_index = index;
             self.viewed_algorithm = algorithm_type;
             self.needs_update = true;
             Ok(())
         } else {
-            Err(anyhow!("Algorithm {:?} is not available in current race", algorithm_type))
+            Err(anyhow!(
+                "Algorithm {:?} is not available in current race",
+                algorithm_type
+            ))
         }
     }
 
@@ -80,7 +86,11 @@ impl DisplayMode {
             self.needs_update = true;
             Ok(())
         } else {
-            Err(anyhow!("Algorithm index {} is out of bounds (max: {})", index, self.available_algorithms.len() - 1))
+            Err(anyhow!(
+                "Algorithm index {} is out of bounds (max: {})",
+                index,
+                self.available_algorithms.len() - 1
+            ))
         }
     }
 
@@ -95,13 +105,17 @@ impl DisplayMode {
     }
 
     /// Get current array data from algorithm instances
-    pub fn get_current_array_data<'a>(&self, algorithms: &'a [Box<dyn Sorter>]) -> Option<&'a [i32]> {
+    pub fn get_current_array_data<'a>(
+        &self,
+        algorithms: &'a [Box<dyn Sorter>],
+    ) -> Option<&'a [i32]> {
         // Find the algorithm that matches our viewed algorithm
         for (i, algorithm) in algorithms.iter().enumerate() {
             if let Some(expected_type) = AlgorithmType::from_index(i)
-                && expected_type == self.viewed_algorithm {
-                    return Some(algorithm.get_array());
-                }
+                && expected_type == self.viewed_algorithm
+            {
+                return Some(algorithm.get_array());
+            }
         }
         None
     }
@@ -138,7 +152,7 @@ impl DisplayMode {
         }
 
         self.available_algorithms = algorithms;
-        
+
         // Ensure current algorithm is still available
         if !self.available_algorithms.contains(&self.viewed_algorithm) {
             self.viewed_algorithm = self.available_algorithms[0];
@@ -146,7 +160,8 @@ impl DisplayMode {
             self.needs_update = true;
         } else {
             // Update cycle index to match current algorithm
-            self.cycle_index = self.available_algorithms
+            self.cycle_index = self
+                .available_algorithms
                 .iter()
                 .position(|&alg| alg == self.viewed_algorithm)
                 .unwrap_or(0);
@@ -203,7 +218,7 @@ impl DisplayMode {
         let available_algorithms = (0..algorithms.len())
             .filter_map(AlgorithmType::from_index)
             .collect();
-        
+
         Self::with_algorithms(available_algorithms).unwrap_or_default()
     }
 
@@ -242,9 +257,7 @@ impl MemoryDisplayValue {
     /// Format as human-readable string
     pub fn as_string(&self) -> String {
         match self {
-            MemoryDisplayValue::Bytes(bytes) => {
-                Self::format_bytes(*bytes)
-            },
+            MemoryDisplayValue::Bytes(bytes) => Self::format_bytes(*bytes),
             MemoryDisplayValue::NotAvailable => "N/A".to_string(),
         }
     }
@@ -282,7 +295,7 @@ mod tests {
     #[test]
     fn test_display_mode_creation() {
         let display = DisplayMode::new();
-        
+
         assert_eq!(display.viewed_algorithm, AlgorithmType::BubbleSort);
         assert_eq!(display.available_algorithms.len(), 7);
         assert_eq!(display.cycle_index, 0);
@@ -292,15 +305,15 @@ mod tests {
     #[test]
     fn test_algorithm_cycling() {
         let mut display = DisplayMode::new();
-        
+
         // Should start with BubbleSort
         assert_eq!(display.viewed_algorithm, AlgorithmType::BubbleSort);
-        
+
         // Cycle to next
         display.cycle_to_next_algorithm();
         assert_eq!(display.viewed_algorithm, AlgorithmType::SelectionSort);
         assert_eq!(display.cycle_index, 1);
-        
+
         // Cycle through all and wrap around
         for _ in 0..6 {
             display.cycle_to_next_algorithm();
@@ -312,31 +325,42 @@ mod tests {
     #[test]
     fn test_set_viewed_algorithm() {
         let mut display = DisplayMode::new();
-        
+
         // Set to specific algorithm
-        assert!(display.set_viewed_algorithm(AlgorithmType::QuickSort).is_ok());
+        assert!(
+            display
+                .set_viewed_algorithm(AlgorithmType::QuickSort)
+                .is_ok()
+        );
         assert_eq!(display.viewed_algorithm, AlgorithmType::QuickSort);
         assert_eq!(display.cycle_index, 4);
-        
+
         // Try to set unavailable algorithm (should fail for this test, but normally wouldn't)
         let limited_algorithms = vec![AlgorithmType::BubbleSort, AlgorithmType::QuickSort];
         let mut limited_display = DisplayMode::with_algorithms(limited_algorithms).unwrap();
-        assert!(limited_display.set_viewed_algorithm(AlgorithmType::ShellSort).is_err());
+        assert!(
+            limited_display
+                .set_viewed_algorithm(AlgorithmType::ShellSort)
+                .is_err()
+        );
     }
 
     #[test]
     fn test_algorithm_index_operations() {
         let mut display = DisplayMode::new();
-        
+
         // Set by index
         assert!(display.set_viewed_algorithm_by_index(3).is_ok());
         assert_eq!(display.viewed_algorithm, AlgorithmType::MergeSort);
-        
+
         // Invalid index
         assert!(display.set_viewed_algorithm_by_index(10).is_err());
-        
+
         // Get algorithm at index
-        assert_eq!(display.get_algorithm_at_index(2), Some(AlgorithmType::InsertionSort));
+        assert_eq!(
+            display.get_algorithm_at_index(2),
+            Some(AlgorithmType::InsertionSort)
+        );
         assert_eq!(display.get_algorithm_at_index(10), None);
     }
 
@@ -344,35 +368,47 @@ mod tests {
     fn test_peek_operations() {
         let mut display = DisplayMode::new();
         display.set_viewed_algorithm_by_index(2).unwrap(); // InsertionSort
-        
-        assert_eq!(display.peek_next_algorithm(), Some(AlgorithmType::MergeSort));
-        assert_eq!(display.peek_previous_algorithm(), Some(AlgorithmType::SelectionSort));
-        
+
+        assert_eq!(
+            display.peek_next_algorithm(),
+            Some(AlgorithmType::MergeSort)
+        );
+        assert_eq!(
+            display.peek_previous_algorithm(),
+            Some(AlgorithmType::SelectionSort)
+        );
+
         // Test wrap-around
         display.set_viewed_algorithm_by_index(0).unwrap(); // BubbleSort
-        assert_eq!(display.peek_previous_algorithm(), Some(AlgorithmType::ShellSort));
-        
+        assert_eq!(
+            display.peek_previous_algorithm(),
+            Some(AlgorithmType::ShellSort)
+        );
+
         display.set_viewed_algorithm_by_index(6).unwrap(); // ShellSort
-        assert_eq!(display.peek_next_algorithm(), Some(AlgorithmType::BubbleSort));
+        assert_eq!(
+            display.peek_next_algorithm(),
+            Some(AlgorithmType::BubbleSort)
+        );
     }
 
     #[test]
     fn test_key_event_processing() {
         let mut display = DisplayMode::new();
-        
+
         let v_key = KeyEvent {
             code: KeyCode::Char('v'),
             modifiers: KeyModifiers::NONE,
             kind: KeyEventKind::Press,
             state: crossterm::event::KeyEventState::empty(),
         };
-        
+
         let initial_algorithm = display.viewed_algorithm;
         let handled = display.process_key_event(v_key).unwrap();
-        
+
         assert!(handled);
         assert_ne!(display.viewed_algorithm, initial_algorithm);
-        
+
         // Test unhandled key
         let other_key = KeyEvent {
             code: KeyCode::Char('x'),
@@ -380,7 +416,7 @@ mod tests {
             kind: KeyEventKind::Press,
             state: crossterm::event::KeyEventState::empty(),
         };
-        
+
         let handled = display.process_key_event(other_key).unwrap();
         assert!(!handled);
     }
@@ -388,14 +424,18 @@ mod tests {
     #[test]
     fn test_available_algorithms_update() {
         let mut display = DisplayMode::new();
-        
+
         // Update to limited set
-        let limited = vec![AlgorithmType::BubbleSort, AlgorithmType::QuickSort, AlgorithmType::HeapSort];
+        let limited = vec![
+            AlgorithmType::BubbleSort,
+            AlgorithmType::QuickSort,
+            AlgorithmType::HeapSort,
+        ];
         assert!(display.update_available_algorithms(limited.clone()).is_ok());
-        
+
         assert_eq!(display.available_algorithms, limited);
         assert_eq!(display.get_algorithm_count(), 3);
-        
+
         // Empty list should fail
         assert!(display.update_available_algorithms(vec![]).is_err());
     }
@@ -404,10 +444,10 @@ mod tests {
     fn test_memory_display_value() {
         let value_bytes = MemoryDisplayValue::Bytes(1536);
         assert_eq!(value_bytes.to_string(), "1.5KB");
-        
+
         let value_na = MemoryDisplayValue::NotAvailable;
         assert_eq!(value_na.to_string(), "N/A");
-        
+
         // Test byte formatting
         assert_eq!(MemoryDisplayValue::Bytes(512).to_string(), "512B");
         assert_eq!(MemoryDisplayValue::Bytes(1024).to_string(), "1.0KB");
@@ -417,11 +457,16 @@ mod tests {
     #[test]
     fn test_algorithm_highlighting() {
         let mut display = DisplayMode::new();
-        display.set_viewed_algorithm(AlgorithmType::QuickSort).unwrap();
-        
+        display
+            .set_viewed_algorithm(AlgorithmType::QuickSort)
+            .unwrap();
+
         assert!(display.is_algorithm_highlighted(AlgorithmType::QuickSort));
         assert!(!display.is_algorithm_highlighted(AlgorithmType::BubbleSort));
-        assert_eq!(display.get_highlighted_algorithm(), AlgorithmType::QuickSort);
+        assert_eq!(
+            display.get_highlighted_algorithm(),
+            AlgorithmType::QuickSort
+        );
     }
 
     #[test]
@@ -429,9 +474,9 @@ mod tests {
         let mut display = DisplayMode::new();
         display.cycle_to_next_algorithm(); // Move away from first
         display.cycle_to_next_algorithm();
-        
+
         assert_ne!(display.viewed_algorithm, AlgorithmType::BubbleSort);
-        
+
         display.reset_to_first();
         assert_eq!(display.viewed_algorithm, AlgorithmType::BubbleSort);
         assert_eq!(display.cycle_index, 0);

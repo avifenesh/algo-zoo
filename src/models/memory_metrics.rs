@@ -135,7 +135,8 @@ impl MemoryMetricsCollection {
 
     /// Add an algorithm to tracking
     pub fn add_algorithm(&mut self, algorithm_type: AlgorithmType) {
-        self.metrics.insert(algorithm_type, MemoryMetrics::new(algorithm_type));
+        self.metrics
+            .insert(algorithm_type, MemoryMetrics::new(algorithm_type));
     }
 
     /// Remove an algorithm from tracking
@@ -147,7 +148,7 @@ impl MemoryMetricsCollection {
     pub fn update_algorithm(&mut self, algorithm_type: AlgorithmType, current_bytes: usize) {
         if let Some(metrics) = self.metrics.get_mut(&algorithm_type) {
             metrics.update(current_bytes);
-            
+
             // Update global peak
             if current_bytes > self.global_peak {
                 self.global_peak = current_bytes;
@@ -157,7 +158,7 @@ impl MemoryMetricsCollection {
             let mut metrics = MemoryMetrics::new(algorithm_type);
             metrics.update(current_bytes);
             self.metrics.insert(algorithm_type, metrics);
-            
+
             if current_bytes > self.global_peak {
                 self.global_peak = current_bytes;
             }
@@ -181,7 +182,11 @@ impl MemoryMetricsCollection {
 
     /// Get metrics as a sorted vector for display
     pub fn get_sorted_metrics(&self) -> Vec<(AlgorithmType, &MemoryMetrics)> {
-        let mut metrics: Vec<_> = self.metrics.iter().map(|(&alg, metrics)| (alg, metrics)).collect();
+        let mut metrics: Vec<_> = self
+            .metrics
+            .iter()
+            .map(|(&alg, metrics)| (alg, metrics))
+            .collect();
         metrics.sort_by_key(|(alg, _)| alg.to_index());
         metrics
     }
@@ -250,12 +255,19 @@ impl MemoryMetricsCollection {
     }
 
     /// Get memory display values for all algorithms
-    pub fn get_memory_display_values(&self) -> Vec<(AlgorithmType, crate::models::display_mode::MemoryDisplayValue)> {
+    pub fn get_memory_display_values(
+        &self,
+    ) -> Vec<(
+        AlgorithmType,
+        crate::models::display_mode::MemoryDisplayValue,
+    )> {
         self.get_sorted_metrics()
             .into_iter()
             .map(|(alg, metrics)| {
                 let display_value = if metrics.current_usage_bytes > 0 {
-                    crate::models::display_mode::MemoryDisplayValue::Bytes(metrics.current_usage_bytes)
+                    crate::models::display_mode::MemoryDisplayValue::Bytes(
+                        metrics.current_usage_bytes,
+                    )
                 } else {
                     crate::models::display_mode::MemoryDisplayValue::NotAvailable
                 };
@@ -372,7 +384,7 @@ mod tests {
     #[test]
     fn test_memory_metrics_creation() {
         let metrics = MemoryMetrics::new(AlgorithmType::BubbleSort);
-        
+
         assert_eq!(metrics.algorithm_type, AlgorithmType::BubbleSort);
         assert_eq!(metrics.current_usage_bytes, 0);
         assert_eq!(metrics.peak_usage_bytes, 0);
@@ -382,15 +394,15 @@ mod tests {
     #[test]
     fn test_memory_metrics_update() {
         let mut metrics = MemoryMetrics::new(AlgorithmType::QuickSort);
-        
+
         metrics.update(1024);
         assert_eq!(metrics.current_usage_bytes, 1024);
         assert_eq!(metrics.peak_usage_bytes, 1024);
-        
+
         metrics.update(512);
         assert_eq!(metrics.current_usage_bytes, 512);
         assert_eq!(metrics.peak_usage_bytes, 1024); // Peak should remain
-        
+
         metrics.update(2048);
         assert_eq!(metrics.current_usage_bytes, 2048);
         assert_eq!(metrics.peak_usage_bytes, 2048); // New peak
@@ -402,7 +414,7 @@ mod tests {
         assert_eq!(MemoryMetrics::format_bytes(1024), "1.0KB");
         assert_eq!(MemoryMetrics::format_bytes(1536), "1.5KB");
         assert_eq!(MemoryMetrics::format_bytes(1048576), "1.0MB");
-        
+
         let metrics = MemoryMetrics::new(AlgorithmType::MergeSort);
         assert_eq!(metrics.format_current(), "0B");
     }
@@ -410,11 +422,11 @@ mod tests {
     #[test]
     fn test_memory_efficiency() {
         let mut metrics = MemoryMetrics::new(AlgorithmType::HeapSort);
-        
+
         metrics.update(1024);
         assert_eq!(metrics.efficiency_ratio(), 1.0); // At peak
         assert!(metrics.is_at_peak());
-        
+
         metrics.update(512);
         assert_eq!(metrics.efficiency_ratio(), 0.5); // Half of peak
         assert!(!metrics.is_at_peak());
@@ -423,11 +435,11 @@ mod tests {
     #[test]
     fn test_memory_collection_creation() {
         let collection = MemoryMetricsCollection::new();
-        
+
         assert_eq!(collection.metrics.len(), 0);
         assert_eq!(collection.global_peak, 0);
         assert!(collection.is_real_time_enabled());
-        
+
         let algorithms = vec![AlgorithmType::BubbleSort, AlgorithmType::QuickSort];
         let collection_with_algs = MemoryMetricsCollection::with_algorithms(&algorithms);
         assert_eq!(collection_with_algs.metrics.len(), 2);
@@ -436,17 +448,17 @@ mod tests {
     #[test]
     fn test_memory_collection_operations() {
         let mut collection = MemoryMetricsCollection::new();
-        
+
         // Add algorithm
         collection.add_algorithm(AlgorithmType::BubbleSort);
         assert!(collection.get_metrics(AlgorithmType::BubbleSort).is_some());
-        
+
         // Update memory
         collection.update_algorithm(AlgorithmType::BubbleSort, 1024);
         let metrics = collection.get_metrics(AlgorithmType::BubbleSort).unwrap();
         assert_eq!(metrics.current_usage_bytes, 1024);
         assert_eq!(collection.get_global_peak(), 1024);
-        
+
         // Remove algorithm
         let removed = collection.remove_algorithm(AlgorithmType::BubbleSort);
         assert!(removed.is_some());
@@ -456,13 +468,13 @@ mod tests {
     #[test]
     fn test_memory_collection_totals() {
         let mut collection = MemoryMetricsCollection::new();
-        
+
         collection.update_algorithm(AlgorithmType::BubbleSort, 1024);
         collection.update_algorithm(AlgorithmType::QuickSort, 2048);
-        
+
         assert_eq!(collection.get_total_current_usage(), 3072);
         assert_eq!(collection.get_total_peak_usage(), 3072);
-        
+
         // Update one algorithm to lower value
         collection.update_algorithm(AlgorithmType::BubbleSort, 512);
         assert_eq!(collection.get_total_current_usage(), 2560);
@@ -472,10 +484,10 @@ mod tests {
     #[test]
     fn test_memory_statistics() {
         let mut collection = MemoryMetricsCollection::new();
-        
+
         collection.update_algorithm(AlgorithmType::BubbleSort, 1024);
         collection.update_algorithm(AlgorithmType::QuickSort, 2048);
-        
+
         let stats = collection.get_statistics();
         assert_eq!(stats.algorithm_count, 2);
         assert_eq!(stats.total_current, 3072);
@@ -485,37 +497,45 @@ mod tests {
     #[test]
     fn test_memory_display_values() {
         let mut collection = MemoryMetricsCollection::new();
-        
+
         collection.update_algorithm(AlgorithmType::BubbleSort, 1024);
         collection.add_algorithm(AlgorithmType::QuickSort); // 0 bytes
-        
+
         let display_values = collection.get_memory_display_values();
         assert_eq!(display_values.len(), 2);
-        
+
         // Find BubbleSort entry
-        let bubble_entry = display_values.iter()
+        let bubble_entry = display_values
+            .iter()
             .find(|(alg, _)| *alg == AlgorithmType::BubbleSort)
             .unwrap();
-        assert_eq!(bubble_entry.1, crate::models::display_mode::MemoryDisplayValue::Bytes(1024));
-        
+        assert_eq!(
+            bubble_entry.1,
+            crate::models::display_mode::MemoryDisplayValue::Bytes(1024)
+        );
+
         // Find QuickSort entry (should be N/A due to 0 bytes)
-        let quick_entry = display_values.iter()
+        let quick_entry = display_values
+            .iter()
             .find(|(alg, _)| *alg == AlgorithmType::QuickSort)
             .unwrap();
-        assert_eq!(quick_entry.1, crate::models::display_mode::MemoryDisplayValue::NotAvailable);
+        assert_eq!(
+            quick_entry.1,
+            crate::models::display_mode::MemoryDisplayValue::NotAvailable
+        );
     }
 
     #[test]
     fn test_highest_usage_algorithms() {
         let mut collection = MemoryMetricsCollection::new();
-        
+
         collection.update_algorithm(AlgorithmType::BubbleSort, 1024);
         collection.update_algorithm(AlgorithmType::QuickSort, 2048);
         collection.update_algorithm(AlgorithmType::MergeSort, 512);
-        
+
         let highest_current = collection.get_highest_current_usage();
         assert_eq!(highest_current, Some((AlgorithmType::QuickSort, 2048)));
-        
+
         let highest_peak = collection.get_highest_peak_usage();
         assert_eq!(highest_peak, Some((AlgorithmType::QuickSort, 2048)));
     }

@@ -1,6 +1,6 @@
 //! Quick Sort implementation
 
-use crate::models::traits::{Sorter, StepResult, Telemetry, Markers};
+use crate::models::traits::{Markers, Sorter, StepResult, Telemetry};
 use std::any::Any;
 
 /// Stack frame for Quick Sort recursion simulation
@@ -78,7 +78,13 @@ impl QuickSort {
         }
 
         match &self.partition_state.clone() {
-            PartitionState::InProgress { current_j, current_i, pivot, low, high } => {
+            PartitionState::InProgress {
+                current_j,
+                current_i,
+                pivot,
+                low,
+                high,
+            } => {
                 let mut j = *current_j;
                 let mut i = *current_i;
                 let pivot_val = *pivot;
@@ -120,7 +126,7 @@ impl QuickSort {
                     };
                     None
                 }
-            }
+            },
             _ => None, // Should not happen when called appropriately
         }
     }
@@ -131,13 +137,18 @@ impl QuickSort {
         match &self.partition_state {
             PartitionState::NotStarted => 0.0,
             PartitionState::Complete => 1.0,
-            PartitionState::InProgress { current_j, low, high, .. } => {
+            PartitionState::InProgress {
+                current_j,
+                low,
+                high,
+                ..
+            } => {
                 if *high <= *low {
                     1.0
                 } else {
                     (*current_j - *low) as f32 / (*high - *low) as f32
                 }
-            }
+            },
         }
     }
 }
@@ -164,38 +175,40 @@ impl Sorter for QuickSort {
 
         // Handle ongoing partition if in progress
         if matches!(self.partition_state, PartitionState::InProgress { .. })
-            && let Some(pivot_pos) = self.continue_partition(&mut remaining_budget) {
-                // Partition completed - add sub-problems to stack
-                if let Some(frame) = self.stack.last() {
-                    let current_frame = frame.clone();
-                    self.stack.pop(); // Remove current frame
-                    
-                    // Add right subarray if it has more than one element
-                    if pivot_pos + 1 < current_frame.high {
-                        self.stack.push(StackFrame {
-                            low: pivot_pos + 1,
-                            high: current_frame.high,
-                        });
-                    }
-                    
-                    // Add left subarray if it has more than one element
-                    if current_frame.low < pivot_pos {
-                        self.stack.push(StackFrame {
-                            low: current_frame.low,
-                            high: pivot_pos - 1,
-                        });
-                    }
+            && let Some(pivot_pos) = self.continue_partition(&mut remaining_budget)
+        {
+            // Partition completed - add sub-problems to stack
+            if let Some(frame) = self.stack.last() {
+                let current_frame = frame.clone();
+                self.stack.pop(); // Remove current frame
+
+                // Add right subarray if it has more than one element
+                if pivot_pos + 1 < current_frame.high {
+                    self.stack.push(StackFrame {
+                        low: pivot_pos + 1,
+                        high: current_frame.high,
+                    });
                 }
-                self.partition_state = PartitionState::NotStarted;
+
+                // Add left subarray if it has more than one element
+                if current_frame.low < pivot_pos {
+                    self.stack.push(StackFrame {
+                        low: current_frame.low,
+                        high: pivot_pos - 1,
+                    });
+                }
             }
-            // If partition didn't complete, we'll continue it in the next step
+            self.partition_state = PartitionState::NotStarted;
+        }
+        // If partition didn't complete, we'll continue it in the next step
 
         // Start new partitions if budget allows and no partition is in progress
-        while remaining_budget > 0 && !self.stack.is_empty() && 
-              matches!(self.partition_state, PartitionState::NotStarted) {
-            
+        while remaining_budget > 0
+            && !self.stack.is_empty()
+            && matches!(self.partition_state, PartitionState::NotStarted)
+        {
             let frame = self.stack.last().unwrap().clone();
-            
+
             if frame.low >= frame.high {
                 self.stack.pop(); // Remove trivial frame
                 continue;
@@ -203,12 +216,12 @@ impl Sorter for QuickSort {
 
             // Start new partition
             self.start_partition(frame.low, frame.high);
-            
+
             // Try to make progress on the new partition
             if let Some(pivot_pos) = self.continue_partition(&mut remaining_budget) {
                 // Partition completed immediately
                 self.stack.pop(); // Remove current frame
-                
+
                 // Add right subarray if it has more than one element
                 if pivot_pos + 1 < frame.high {
                     self.stack.push(StackFrame {
@@ -216,7 +229,7 @@ impl Sorter for QuickSort {
                         high: frame.high,
                     });
                 }
-                
+
                 // Add left subarray if it has more than one element
                 if frame.low < pivot_pos {
                     self.stack.push(StackFrame {
@@ -224,7 +237,7 @@ impl Sorter for QuickSort {
                         high: pivot_pos - 1,
                     });
                 }
-                
+
                 self.partition_state = PartitionState::NotStarted;
             } else {
                 // Partition started but not completed - will continue next step
@@ -256,40 +269,56 @@ impl Sorter for QuickSort {
 
     fn get_telemetry(&self) -> Telemetry {
         let mut markers = Markers::default();
-        
+
         if let Some(pivot) = self.current_pivot {
             markers.pivot = Some(pivot);
         }
 
         // Add cursors for current partition state
         match &self.partition_state {
-            PartitionState::InProgress { current_j, current_i, low, high, .. } => {
+            PartitionState::InProgress {
+                current_j,
+                current_i,
+                low,
+                high,
+                ..
+            } => {
                 markers.cursors = vec![*current_i, *current_j, *low, *high];
-            }
+            },
             _ => {
                 if let Some(frame) = self.stack.last() {
                     markers.cursors = vec![frame.low, frame.high];
                 }
-            }
+            },
         }
 
         let progress_hint = self.calculate_progress();
-        
+
         let status_text = if self.complete {
             "Completed".to_string()
         } else {
             match &self.partition_state {
-                PartitionState::InProgress { current_j, low, high, .. } => {
-                    format!("Partitioning range [{}, {}] - progress: {}/{}", 
-                           low, high, current_j - low, high - low)
-                }
+                PartitionState::InProgress {
+                    current_j,
+                    low,
+                    high,
+                    ..
+                } => {
+                    format!(
+                        "Partitioning range [{}, {}] - progress: {}/{}",
+                        low,
+                        high,
+                        current_j - low,
+                        high - low
+                    )
+                },
                 _ => {
                     if let Some(frame) = self.stack.last() {
                         format!("Partitioning range [{}, {}]", frame.low, frame.high)
                     } else {
                         "Processing".to_string()
                     }
-                }
+                },
             }
         };
 
@@ -335,8 +364,8 @@ impl Sorter for QuickSort {
 
     fn get_memory_usage(&self) -> usize {
         // Data array + stack memory
-        self.data.len() * std::mem::size_of::<i32>() + 
-        self.stack.len() * std::mem::size_of::<StackFrame>()
+        self.data.len() * std::mem::size_of::<i32>()
+            + self.stack.len() * std::mem::size_of::<StackFrame>()
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -366,17 +395,22 @@ impl QuickSort {
 
         // Add fine-grained progress from current partition
         let partition_progress = match &self.partition_state {
-            PartitionState::InProgress { current_j, low, high, .. } if high > low => {
+            PartitionState::InProgress {
+                current_j,
+                low,
+                high,
+                ..
+            } if high > low => {
                 let current_partition_size = high - low;
                 let partition_weight = current_partition_size as f32 / n;
                 let local_progress = (*current_j - *low) as f32 / (*high - *low) as f32;
                 partition_weight * local_progress * 0.05
-            }
+            },
             _ => 0.0,
         };
 
         let current_progress = (base_progress + partition_progress).min(1.0).max(0.0);
-        
+
         // Ensure monotonicity: never decrease progress
         self.max_progress_seen.max(current_progress)
     }

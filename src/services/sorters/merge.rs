@@ -1,6 +1,6 @@
 //! Merge Sort implementation
 
-use crate::models::traits::{Sorter, StepResult, Telemetry, Markers};
+use crate::models::traits::{Markers, Sorter, StepResult, Telemetry};
 use std::any::Any;
 
 #[derive(Debug, Clone)]
@@ -117,7 +117,7 @@ impl Sorter for MergeSort {
                 MergeState::Split => {
                     if frame.left < frame.right {
                         let mid = (frame.left + frame.right) / 2;
-                        
+
                         // Push merge operation for later
                         self.stack.push(MergeFrame {
                             left: frame.left,
@@ -151,16 +151,16 @@ impl Sorter for MergeSort {
                             output_idx: 0,
                         });
                     }
-                }
+                },
                 MergeState::Merge => {
                     let finished = self.merge(&mut frame, &mut remaining_budget);
-                    
+
                     if !finished {
                         // Merge not finished, push back to stack
                         self.stack.push(frame);
                         break;
                     }
-                }
+                },
             }
         }
 
@@ -181,22 +181,23 @@ impl Sorter for MergeSort {
 
     fn get_telemetry(&self) -> Telemetry {
         let mut markers = Markers::default();
-        
+
         if let Some(frame) = self.stack.last()
-            && frame.state == MergeState::Merge {
-                markers.merge_runs.push((frame.left, frame.right));
-                
-                // Show current merge positions
-                if frame.temp_left_idx <= frame.mid {
-                    markers.cursors.push(frame.temp_left_idx);
-                }
-                if frame.temp_right_idx <= frame.right {
-                    markers.cursors.push(frame.temp_right_idx);
-                }
-                if frame.output_idx <= frame.right {
-                    markers.cursors.push(frame.output_idx);
-                }
+            && frame.state == MergeState::Merge
+        {
+            markers.merge_runs.push((frame.left, frame.right));
+
+            // Show current merge positions
+            if frame.temp_left_idx <= frame.mid {
+                markers.cursors.push(frame.temp_left_idx);
             }
+            if frame.temp_right_idx <= frame.right {
+                markers.cursors.push(frame.temp_right_idx);
+            }
+            if frame.output_idx <= frame.right {
+                markers.cursors.push(frame.output_idx);
+            }
+        }
 
         Telemetry {
             total_comparisons: self.comparisons,
@@ -209,7 +210,9 @@ impl Sorter for MergeSort {
                 "Completed".to_string()
             } else if let Some(frame) = self.stack.last() {
                 match frame.state {
-                    MergeState::Split => format!("Splitting range [{}, {}]", frame.left, frame.right),
+                    MergeState::Split => {
+                        format!("Splitting range [{}, {}]", frame.left, frame.right)
+                    },
                     MergeState::Merge => format!("Merging range [{}, {}]", frame.left, frame.right),
                 }
             } else {
@@ -218,8 +221,13 @@ impl Sorter for MergeSort {
             progress_hint: if self.data.len() <= 1 {
                 1.0
             } else {
-                let progress = 1.0 - (self.stack.len() as f32 / (self.data.len() as f32).log2().max(1.0));
-                if progress.is_finite() { progress.min(1.0).max(0.0) } else { 0.0 }
+                let progress =
+                    1.0 - (self.stack.len() as f32 / (self.data.len() as f32).log2().max(1.0));
+                if progress.is_finite() {
+                    progress.min(1.0).max(0.0)
+                } else {
+                    0.0
+                }
             },
         }
     }
@@ -231,7 +239,7 @@ impl Sorter for MergeSort {
         self.comparisons = 0;
         self.moves = 0;
         self.complete = self.data.len() <= 1;
-        
+
         // Calculate memory usage: temp buffer + stack
         self.memory_usage = self.temp_buffer.len() * std::mem::size_of::<i32>();
 
@@ -245,7 +253,7 @@ impl Sorter for MergeSort {
                 temp_right_idx: 0,
                 output_idx: 0,
             });
-            
+
             self.memory_usage += self.stack.capacity() * std::mem::size_of::<MergeFrame>();
         }
     }

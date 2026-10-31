@@ -76,15 +76,12 @@ mod tests {
         let fairness = ComparisonFairness::new(10);
         let mut bubble1 = BubbleSort::new();
         let mut bubble2 = BubbleSort::new();
-        
+
         // Set up one completed algorithm
         bubble1.reset(vec![]); // Empty array makes it complete
         bubble2.reset(vec![3, 1, 2]); // Non-empty array
 
-        let algorithms: Vec<Box<dyn Sorter>> = vec![
-            Box::new(bubble1),
-            Box::new(bubble2),
-        ];
+        let algorithms: Vec<Box<dyn Sorter>> = vec![Box::new(bubble1), Box::new(bubble2)];
 
         let budgets = fairness.allocate_budget(&algorithms);
         assert_eq!(budgets[0], 0); // Completed algorithm gets 0

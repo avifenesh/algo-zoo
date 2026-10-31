@@ -47,7 +47,7 @@ impl InputHandler {
                 Ok(value) => return Ok(value),
                 Err(e) => {
                     println!("Invalid input: {}. Please try again.", e);
-                }
+                },
             }
         }
     }
@@ -75,7 +75,7 @@ impl InputHandler {
                 Ok(()) => return Ok(input),
                 Err(error) => {
                     println!("Invalid input: {}. Please try again.", error);
-                }
+                },
             }
         }
     }
@@ -92,13 +92,10 @@ impl InputHandler {
             match input.parse::<usize>() {
                 Ok(choice) if choice > 0 && choice <= choices.len() => {
                     return Ok(choice - 1);
-                }
+                },
                 _ => {
-                    println!(
-                        "Please enter a number between 1 and {}.",
-                        choices.len()
-                    );
-                }
+                    println!("Please enter a number between 1 and {}.", choices.len());
+                },
             }
         }
     }
@@ -206,7 +203,7 @@ impl Menu {
         loop {
             // Clear screen (simple implementation)
             print!("\x1B[2J\x1B[H");
-            
+
             // Display title
             println!("{}", self.title);
             println!("{}", "=".repeat(self.title.len()));
@@ -225,7 +222,7 @@ impl Menu {
             println!("Use numbers to select, or 'q' to quit:");
 
             let input = input_handler.read_line()?;
-            
+
             if input == "q" || input == "quit" {
                 return Err(io::Error::new(io::ErrorKind::Interrupted, "User quit"));
             }
@@ -233,12 +230,15 @@ impl Menu {
             match input.parse::<usize>() {
                 Ok(choice) if choice > 0 && choice <= self.items.len() => {
                     return Ok(choice - 1);
-                }
+                },
                 _ => {
-                    println!("Please enter a number between 1 and {} or 'q' to quit.", self.items.len());
+                    println!(
+                        "Please enter a number between 1 and {} or 'q' to quit.",
+                        self.items.len()
+                    );
                     println!("Press Enter to continue...");
                     input_handler.read_line()?;
-                }
+                },
             }
         }
     }
@@ -321,7 +321,7 @@ mod tests {
         let mut menu = Menu::new("Test".to_string(), vec![]);
         menu.add_item("Item 1".to_string());
         assert_eq!(menu.len(), 1);
-        
+
         let removed = menu.remove_item(0);
         assert_eq!(removed, Some("Item 1".to_string()));
         assert_eq!(menu.len(), 0);
